@@ -1,6 +1,13 @@
 cmdarg
 ======
 
+    source cmdarg.sh
+
+Enjoy
+
+Usage
+=====
+
 cmdarg is a helper library I wrote for bash scripts because, at current, option parsing in bash (-foo bar, etc) is really hard, lots harder than it should be, given bash's target audience. So here's my solution. There are 4 functions you will care about:
 
     cmdarg
