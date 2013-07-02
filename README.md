@@ -1,6 +1,8 @@
 cmdarg
 ======
 
+Requires bash >= 4.
+
     source cmdarg.sh
 
 Enjoy
