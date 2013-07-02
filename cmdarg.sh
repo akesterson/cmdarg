@@ -87,6 +87,8 @@ function cmdarg_usage
 	    echo "    -${key} : ${CMDARG_DESC[$key]} $default"
 	done
     fi
+    echo
+    echo "${CMDARG_INFO['footer']}"
 }
 
 function cmdarg_parse
