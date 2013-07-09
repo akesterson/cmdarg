@@ -16,7 +16,6 @@ function cmdarg
     #             the argument value is invalid. Can be straight bash, but it really
     #             should be the name of a function. This may be enforced in future versions
     #             of the library.
-    set -u
     shortopt=${1:0:1}
     if [[ "${1:1:2}" == ":" ]]; then
 	CMDARG_FLAGS[$shortopt]=$CMDARG_FLAG_WITHARG
@@ -35,7 +34,6 @@ function cmdarg
     cmdarg_cfg["$2"]="${4:-}"
     CMDARG_VALIDATORS["$shortopt"]="${5:-}"
     CMDARG_GETOPTLIST="${CMDARG_GETOPTLIST}$1"
-    set +u
 }
 
 function cmdarg_info
@@ -133,13 +131,11 @@ function cmdarg_parse
 	shortopt=${CMDARG_REV[$opt]}
     	if [ "${CMDARG_VALIDATORS[$shortopt]}" != "" ]; then
     	    OPTARG=${cmdarg_cfg[$opt]}
-	    set +e
 	    ( eval "${CMDARG_VALIDATORS[${shortopt}]}" && [ "$OPTARG" != "" ])
 	    if [ $? -ne 0 ]; then
 		echo "Invalid value for -$shortopt : ${cmdarg_cfg[$opt]}"
 		failed=1
 	    fi
-	    set -e
     	fi
     done
     if [ $failed -eq 1 ]; then
@@ -162,11 +158,13 @@ function cmdarg_traceback
     local i=0
     local FRAMES=${#BASH_LINENO[@]}
     # FRAMES-2 skips main, the last one in arrays
-    for ((i=FRAMES-2; i>=0; i--)); do
-	echo '  File' \"${BASH_SOURCE[i+1]}\", line ${BASH_LINENO[i]}, in ${FUNCNAME[i+1]}
+    for ((i=FRAMES-2; i>=1; i--)); do
+	echo '  File' \"${BASH_SOURCE[i+1]}\", line ${BASH_LINENO[i]}, probably in ${FUNCNAME[i+1]} >&2
 	# Grab the source code of the line
-	sed -n "${BASH_LINENO[i]}{s/^/    /;p}" "${BASH_SOURCE[i+1]}"
+	sed -n "${BASH_LINENO[i]}{s/^/    /;p}" "${BASH_SOURCE[i+1]}" >&2
     done
+    echo "  Error: $LASTERR"
+    unset FRAMES
 }
 
 if [[ "${_DEFINED_CMDARG}" == "" ]]; then
