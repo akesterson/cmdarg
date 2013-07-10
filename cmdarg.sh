@@ -103,7 +103,11 @@ function cmdarg_parse
 	    cmdarg_usage
     	    exit 1
     	elif [ ${CMDARG["${opt}"]+abc} ]; then
-    	    cmdarg_cfg[${CMDARG[$opt]}]=$OPTARG
+	    if [ ${CMDARG_FLAGS[${opt}]} -eq 0 ]; then
+		cmdarg_cfg[${CMDARG[$opt]}]=true
+	    else
+    		cmdarg_cfg[${CMDARG[$opt]}]=$OPTARG
+	    fi
     	else
     	    cmdarg_usage
     	    exit 1
