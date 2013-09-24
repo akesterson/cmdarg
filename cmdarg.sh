@@ -1,5 +1,11 @@
 #!/bin/bash
 
+bashversion=$(bash --version | head -n 1 | grep "version [0-9]" | cut -d ' ' -f 2)
+if [ $bashversion -lt 4 ]; then
+    echo "cmdarg is incompatible with bash versions < 4.0, please upgrade bash" >&2
+    exit 1
+fi
+
 CMDARG_FLAG_WITHARG=1
 
 function cmdarg
