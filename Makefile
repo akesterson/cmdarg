@@ -12,6 +12,10 @@ ifndef PREFIX
 	PREFIX=/
 endif
 
+ifeq ($(shell uname -o),Cygwin)
+        PREFIX=
+endif
+
 DISTFILE_DEPS=$(shell find . -type f | grep -Ev '\.git|\./dist/|$(DISTFILE)')
 
 all: ./dist/$(RPM)
