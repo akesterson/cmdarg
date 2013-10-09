@@ -36,7 +36,6 @@ function cmdarg
 	exit 1
     fi
     if  [[ "$(type -t cmdarg_$key)" != "" ]] || \
-	[[ "$(eval 'echo ${cmdarg_${key}}' 2>/dev/null)" != "" ]] || \
 	[[ "${CMDARG_TYPES[$key]}" != "" ]]; then
 	echo "command line key '$key' is reserved by cmdarg or defined twice" >&2
 	exit 1
@@ -45,14 +44,14 @@ function cmdarg
     if [[ "${1:1:1}" == ":" ]]; then
 	CMDARG_FLAGS[$shortopt]=$CMDARG_FLAG_WITHARG
 	if [[ "${1:2:4}" == "[]" ]]; then
-	    declare -p cmdarg_${key} >/dev/null 2>&1
+	    declare -p ${key} >/dev/null 2>&1
 	    if [[ $? -ne 0 ]]; then
 		echo 'Array variable cmdarg_'"${key}"' does not exist. Array variables MUST be declared by the user!' >&2
 		exit 1
 	    fi
 	    CMDARG_TYPES[$key]=$CMDARG_TYPE_ARRAY
 	elif [[ "${1:2:4}" == "{}" ]]; then
-	    declare -p cmdarg_${key} >/dev/null 2>&1
+	    declare -p ${key} >/dev/null 2>&1
 	    if [[ $? -ne 0 ]]; then
 		echo 'Hash variable cmdarg_'"${key}"' does not exist. Hash variables MUST be declared by the user!' >&2
 		exit 1
@@ -167,13 +166,13 @@ function cmdarg_set_opt
 	    cmdarg_cfg[$key]=true
 	    ;;
 	$CMDARG_TYPE_ARRAY)
-	    arrname="cmdarg_${key}"
+	    arrname="${key}"
 	    str='${#'"$arrname"'[@]}'
 	    prevlen=$(eval "echo $str")
 	    eval "${arrname}[$((prevlen + 1))]=\"$arg\""
 	    ;;
 	$CMDARG_TYPE_HASH)
-	    arrname="cmdarg_${key}"
+	    arrname="${key}"
 	    # Want to know WTF I named this variable like this?
 	    # http://stackoverflow.com/questions/10258686/bash-associative-array-error
 	    # ... Apparently there is a bug in bash.
@@ -203,13 +202,13 @@ function cmdarg_check_empty
 	$CMDARG_TYPE_BOOLEAN)
 	    echo ${cmdarg_cfg[$longopt]}
 	    ;;
-	    $CMDARG_TYPE_ARRAY)
-	arrname="cmdarg_${longopt}"
+	$CMDARG_TYPE_ARRAY)
+	    arrname="${longopt}"
 	    lval='${!'"${arrname}"'[@]}'
 	    eval "echo $lval"
 	    ;;
 	$CMDARG_TYPE_HASH)
-	    arrname="cmdarg_${longopt}"
+	    arrname="${longopt}"
 	    lval='${!'"${arrname}"'[@]}'
 	    eval "echo $lval"
 	    ;;
@@ -302,7 +301,7 @@ function cmdarg_dump
     do
 	repr="${key}:${CMDARG_TYPES[$key]}"
 	if [[ ${CMDARG_TYPES[$key]} == $CMDARG_TYPE_ARRAY ]] || [[ ${CMDARG_TYPES[$key]} == $CMDARG_TYPE_HASH ]] ; then
-	    arrname="cmdarg_${key}"
+	    arrname="${key}"
 	    echo "${repr} => "
 	    keys='${!'"$arrname"'[@]}'
 	    for idx in $(eval "echo $keys")
