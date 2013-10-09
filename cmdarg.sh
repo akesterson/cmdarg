@@ -6,7 +6,14 @@ if [ $bashversion -lt 4 ]; then
     exit 1
 fi
 
+
+CMDARG_FLAG_NOARG=0
 CMDARG_FLAG_WITHARG=1
+
+CMDARG_TYPE_ARRAY=1
+CMDARG_TYPE_HASH=2
+CMDARG_TYPE_STRING=3
+CMDARG_TYPE_BOOLEAN=4
 
 function cmdarg
 {
@@ -23,11 +30,43 @@ function cmdarg
     #             should be the name of a function. This may be enforced in future versions
     #             of the library.
     shortopt=${1:0:1}
-    if [[ "${1:1:2}" == ":" ]]; then
-	CMDARG_FLAGS[$shortopt]=$CMDARG_FLAG_WITHARG
-    else
-	CMDARG_FLAGS[$shortopt]=0
+    key="$2"
+    if [[ "$shortopt" == "h" ]]; then
+	echo "-h is reserved for cmdarg usage" >&2
+	exit 1
     fi
+    if  [[ "$(type -t cmdarg_$key)" != "" ]] || \
+	[[ "$(eval 'echo ${cmdarg_${key}}' 2>/dev/null)" != "" ]] || \
+	[[ "${CMDARG_TYPES[$key]}" != "" ]]; then
+	echo "command line key '$key' is reserved by cmdarg or defined twice" >&2
+	exit 1
+    fi
+
+    if [[ "${1:1:1}" == ":" ]]; then
+	CMDARG_FLAGS[$shortopt]=$CMDARG_FLAG_WITHARG
+	if [[ "${1:2:4}" == "[]" ]]; then
+	    declare -p cmdarg_${key} >/dev/null 2>&1
+	    if [[ $? -ne 0 ]]; then
+		echo 'Array variable cmdarg_'"${key}"' does not exist. Array variables MUST be declared by the user!' >&2
+		exit 1
+	    fi
+	    CMDARG_TYPES[$key]=$CMDARG_TYPE_ARRAY
+	elif [[ "${1:2:4}" == "{}" ]]; then
+	    declare -p cmdarg_${key} >/dev/null 2>&1
+	    if [[ $? -ne 0 ]]; then
+		echo 'Hash variable cmdarg_'"${key}"' does not exist. Hash variables MUST be declared by the user!' >&2
+		exit 1
+	    fi
+	    CMDARG_TYPES[$key]=$CMDARG_TYPE_HASH
+	else
+	    CMDARG_TYPES[$key]=$CMDARG_TYPE_STRING
+	fi
+    else
+	CMDARG_FLAGS[$shortopt]=$CMDARG_FLAG_NOARG
+	CMDARG_TYPES[$key]=$CMDARG_TYPE_BOOLEAN
+	cmdarg_cfg[$key]=false
+    fi
+
     CMDARG["$shortopt"]=$2
     CMDARG_REV["$2"]=$shortopt
     CMDARG_DESC["$shortopt"]=$3
@@ -58,6 +97,34 @@ function cmdarg_info
     CMDARG_INFO["$1"]=$2
 }
 
+function cmdarg_describe
+{
+    local key default
+    key=${CMDARG[$1]}
+    opt=$1
+    if [ "${CMDARG_DEFAULT[$key]}" != "" ]; then
+	default="(Default \"${CMDARG_DEFAULT[$key]}\")"
+    fi
+    case ${CMDARG_TYPES[$key]} in
+	$CMDARG_TYPE_STRING)
+	    echo "-${opt} v : String. ${CMDARG_DESC[$key]} $default"
+	    ;;
+	$CMDARG_TYPE_BOOLEAN)
+	    echo "-${opt} : Boolean. ${CMDARG_DESC[$key]} $default"
+	    ;;
+	$CMDARG_TYPE_ARRAY)
+	    echo "-${opt} v[, ...]  : Array. ${CMDARG_DESC[$key]}. Pass this argument multiple times for multiple values. $default"
+	    ;;
+	$CMDARG_TYPE_HASH)
+	    echo "-${opt} k=v{, ..} : Hash. ${CMDARG_DESC[$key]}. Pass this argument multiple times for multiple key/value pairs. $default"
+	    ;;
+	*)
+	    echo "Unable to return string description for ${key}; unknown type ${CMDARG_TYPES[$key]}" >&2
+	    exit 1
+	    ;;
+    esac
+}
+
 function cmdarg_usage
 {
     # cmdarg_usage
@@ -72,11 +139,7 @@ function cmdarg_usage
 	echo "Required Arguments:"
 	for key in "${CMDARG_REQUIRED[@]}"
 	do
-	    local default=""
-	    if [ "${CMDARG_DEFAULT[$key]}" != "" ]; then
-		default="(Default \"${CMDARG_DEFAULT[$key]}\")"
-	    fi
-	    echo "    -${key} : ${CMDARG_DESC[$key]} $default"
+	    echo "    $(cmdarg_describe $key)"
 	done
 	echo
     fi
@@ -84,15 +147,76 @@ function cmdarg_usage
 	echo "Optional Arguments:"
 	for key in "${CMDARG_OPTIONAL[@]}"
 	do
-	    local default=""
-	    if [ "${CMDARG_DEFAULT[$key]}" != "" ]; then
-		default="(Default \"${CMDARG_DEFAULT[$key]}\")"
-	    fi
-	    echo "    -${key} : ${CMDARG_DESC[$key]} $default"
+	    echo "    $(cmdarg_describe $key)"
 	done
     fi
     echo
     echo "${CMDARG_INFO['footer']}"
+}
+
+function cmdarg_set_opt
+{
+    local key arg
+    key=$1
+    arg="$2"
+    case ${CMDARG_TYPES[$key]} in
+	$CMDARG_TYPE_STRING)
+	    cmdarg_cfg[$key]=$OPTARG
+	    ;;
+	$CMDARG_TYPE_BOOLEAN)
+	    cmdarg_cfg[$key]=true
+	    ;;
+	$CMDARG_TYPE_ARRAY)
+	    arrname="cmdarg_${key}"
+	    str='${#'"$arrname"'[@]}'
+	    prevlen=$(eval "echo $str")
+	    eval "${arrname}[$((prevlen + 1))]=\"$arg\""
+	    ;;
+	$CMDARG_TYPE_HASH)
+	    arrname="cmdarg_${key}"
+	    # Want to know WTF I named this variable like this?
+	    # http://stackoverflow.com/questions/10258686/bash-associative-array-error
+	    # ... Apparently there is a bug in bash.
+	    cmdarghashkeythingy31337=$(echo "$arg" | cut -d = -f 1)
+	    v=$(echo "$arg" | cut -d = -f 2-)
+	    lval="${arrname}['${cmdarghashkeythingy31337}']"
+	    eval "$lval=\"$v\""
+	    ;;
+	*)
+	    echo "Unable to return string description for ${key}; unknown type ${CMDARG_TYPES[$key]}" >&2
+	    exit 1
+	    ;;
+    esac
+}
+
+function cmdarg_check_empty
+{
+    local key longopt
+    key=$1
+    longopt=${CMDARG[$key]}
+    type=${CMDARG_TYPES[$longopt]}
+
+    case $type in
+	$CMDARG_TYPE_STRING)
+            echo ${cmdarg_cfg[$longopt]}
+            ;;
+	$CMDARG_TYPE_BOOLEAN)
+	    echo ${cmdarg_cfg[$longopt]}
+	    ;;
+	    $CMDARG_TYPE_ARRAY)
+	arrname="cmdarg_${longopt}"
+	    lval='${!'"${arrname}"'[@]}'
+	    eval "echo $lval"
+	    ;;
+	$CMDARG_TYPE_HASH)
+	    arrname="cmdarg_${longopt}"
+	    lval='${!'"${arrname}"'[@]}'
+	    eval "echo $lval"
+	    ;;
+	*)
+	    echo "${cmdarg_cfg[$longopt]}"
+	    ;;
+    esac
 }
 
 function cmdarg_parse
@@ -102,18 +226,13 @@ function cmdarg_parse
     # Call it EXACTLY LIKE THAT, and it will parse your arguments for you.
     # This function only knows about the arguments that you previously called 'cmdarg' for.
     local OPTIND
-    local ARGS="$@"
 
-    while getopts "$CMDARG_GETOPTLIST" opt $ARGS; do
+    while getopts "$CMDARG_GETOPTLIST" opt "$@"; do
     	if [ "$opt" == "h" ]; then
 	    cmdarg_usage
     	    exit 1
     	elif [ ${CMDARG["${opt}"]+abc} ]; then
-	    if [ ${CMDARG_FLAGS[${opt}]} -eq 0 ]; then
-		cmdarg_cfg[${CMDARG[$opt]}]=true
-	    else
-    		cmdarg_cfg[${CMDARG[$opt]}]=$OPTARG
-	    fi
+	    cmdarg_set_opt "${CMDARG[$opt]}" "$OPTARG"
     	else
     	    cmdarg_usage
     	    exit 1
@@ -128,7 +247,7 @@ function cmdarg_parse
 
     for key in "${CMDARG_REQUIRED[@]}"
     do
-	if [[ "${cmdarg_cfg[${CMDARG[$key]}]}" == "" ]]; then
+	if [[ "$(cmdarg_check_empty $key)" == "" ]]; then
 	    missing="${missing} -${key}"
 	    failed=1
 	fi
@@ -177,6 +296,27 @@ function cmdarg_traceback
     unset FRAMES
 }
 
+function cmdarg_dump
+{
+    for key in ${!cmdarg_cfg[@]}
+    do
+	repr="${key}:${CMDARG_TYPES[$key]}"
+	if [[ ${CMDARG_TYPES[$key]} == $CMDARG_TYPE_ARRAY ]] || [[ ${CMDARG_TYPES[$key]} == $CMDARG_TYPE_HASH ]] ; then
+	    arrname="cmdarg_${key}"
+	    echo "${repr} => "
+	    keys='${!'"$arrname"'[@]}'
+	    for idx in $(eval "echo $keys")
+	    do
+		ref='${'"$arrname"'[$idx]}'
+		value=$(eval "echo $ref")
+		echo "        ${idx} => $value"
+	    done
+	else
+	    echo "${repr} => ${cmdarg_cfg[$key]}"
+	fi
+    done
+}
+
 if [[ "${_DEFINED_CMDARG}" == "" ]]; then
     export _DEFINED_CMDARG=0
     # Holds the final map of configuration options
@@ -199,5 +339,7 @@ if [[ "${_DEFINED_CMDARG}" == "" ]]; then
     declare -A CMDARG_INFO
     # Map of (short arg) -> flags
     declare -A CMDARG_FLAGS
+    # Map of (short arg) -> type (string, array, hash)
+    declare -A CMDARG_TYPES
     CMDARG_GETOPTLIST="h"
 fi
