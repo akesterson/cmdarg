@@ -9,11 +9,7 @@ endif
 RPM=cmdarg-$(VERSION)-$(RELEASE).noarch.rpm
 
 ifndef PREFIX
-	PREFIX=/
-endif
-
-ifeq ($(shell uname -o),Cygwin)
-        PREFIX=
+	PREFIX=''
 endif
 
 DISTFILE_DEPS=$(shell find . -type f | grep -Ev '\.git|\./dist/|$(DISTFILE)')

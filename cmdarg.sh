@@ -46,14 +46,14 @@ function cmdarg
 	if [[ "${1:2:4}" == "[]" ]]; then
 	    declare -p ${key} >/dev/null 2>&1
 	    if [[ $? -ne 0 ]]; then
-		echo 'Array variable cmdarg_'"${key}"' does not exist. Array variables MUST be declared by the user!' >&2
+		echo 'Array variable '"${key}"' does not exist. Array variables MUST be declared by the user!' >&2
 		exit 1
 	    fi
 	    CMDARG_TYPES[$key]=$CMDARG_TYPE_ARRAY
 	elif [[ "${1:2:4}" == "{}" ]]; then
 	    declare -p ${key} >/dev/null 2>&1
 	    if [[ $? -ne 0 ]]; then
-		echo 'Hash variable cmdarg_'"${key}"' does not exist. Hash variables MUST be declared by the user!' >&2
+		echo 'Hash variable '"${key}"' does not exist. Hash variables MUST be declared by the user!' >&2
 		exit 1
 	    fi
 	    CMDARG_TYPES[$key]=$CMDARG_TYPE_HASH
@@ -98,27 +98,28 @@ function cmdarg_info
 
 function cmdarg_describe
 {
+    echo "cmdarg_describe $@" >&2
     local key default
-    key=${CMDARG[$1]}
+    longopt=${CMDARG[$1]}
     opt=$1
-    if [ "${CMDARG_DEFAULT[$key]}" != "" ]; then
-	default="(Default \"${CMDARG_DEFAULT[$key]}\")"
+    if [ "${CMDARG_DEFAULT[$longopt]}" != "" ]; then
+	default="(Default \"${CMDARG_DEFAULT[$longopt]}\")"
     fi
-    case ${CMDARG_TYPES[$key]} in
+    case ${CMDARG_TYPES[$longopt]} in
 	$CMDARG_TYPE_STRING)
-	    echo "-${opt} v : String. ${CMDARG_DESC[$key]} $default"
+	    echo "-${opt} v : String. ${CMDARG_DESC[$opt]} $default"
 	    ;;
 	$CMDARG_TYPE_BOOLEAN)
-	    echo "-${opt} : Boolean. ${CMDARG_DESC[$key]} $default"
+	    echo "-${opt} : Boolean. ${CMDARG_DESC[$opt]} $default"
 	    ;;
 	$CMDARG_TYPE_ARRAY)
-	    echo "-${opt} v[, ...]  : Array. ${CMDARG_DESC[$key]}. Pass this argument multiple times for multiple values. $default"
+	    echo "-${opt} v[, ...]  : Array. ${CMDARG_DESC[$opt]}. Pass this argument multiple times for multiple values. $default"
 	    ;;
 	$CMDARG_TYPE_HASH)
-	    echo "-${opt} k=v{, ..} : Hash. ${CMDARG_DESC[$key]}. Pass this argument multiple times for multiple key/value pairs. $default"
+	    echo "-${opt} k=v{, ..} : Hash. ${CMDARG_DESC[$opt]}. Pass this argument multiple times for multiple key/value pairs. $default"
 	    ;;
 	*)
-	    echo "Unable to return string description for ${key}; unknown type ${CMDARG_TYPES[$key]}" >&2
+	    echo "Unable to return string description for ${key}; unknown type ${CMDARG_TYPES[$opt]}" >&2
 	    exit 1
 	    ;;
     esac
@@ -135,7 +136,6 @@ function cmdarg_usage
     echo
     local key
     if [[ "${!CMDARG_REQUIRED[@]}" != "" ]]; then
-	echo "Required Arguments:"
 	for key in "${CMDARG_REQUIRED[@]}"
 	do
 	    echo "    $(cmdarg_describe $key)"
@@ -143,7 +143,6 @@ function cmdarg_usage
 	echo
     fi
     if [[ "${!CMDARG_OPTIONAL[@]}" != "" ]]; then
-	echo "Optional Arguments:"
 	for key in "${CMDARG_OPTIONAL[@]}"
 	do
 	    echo "    $(cmdarg_describe $key)"
@@ -314,6 +313,23 @@ function cmdarg_dump
 	    echo "${repr} => ${cmdarg_cfg[$key]}"
 	fi
     done
+}
+
+function cmdarg_purge
+{
+    arrays="cmdarg_cfg CMDARG CMDARG_REV CMDARG_OPTIONAL CMDARG_REQUIRED"
+    arrays="$arrays CMDARG_DESC CMDARG_DEFAULT CMDARG_VALIDATORS CMDARG_INFO"
+    arrays="$arrays CMDARG_FLAGS CMDARG_TYPES"
+    for arr in $arrays
+    do
+	str='${!'"$arr"'[@]}'
+	for key in $(eval "echo $str")
+	do
+	    str="$arr[$key]"
+	    eval "unset $str"
+	done
+    done
+    CMDARG_GETOPTLIST="h"
 }
 
 if [[ "${_DEFINED_CMDARG}" == "" ]]; then
