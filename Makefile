@@ -49,7 +49,7 @@ $(DISTFILE): version.sh
 
 ./dist/$(SRPM): $(DISTFILE)
 	rm -fr ./dist/$(SRPM)
-	mock --buildsrpm --spec $(SPECFILE) $(MOCKFILE) --sources ./dist/ --resultdir ./dist/ --define "version $(VERSION)" --define "release $(RELEASE)"
+	mock --buildsrpm --spec $(SPECFILE) $(MOCKFLAGS) --sources ./dist/ --resultdir ./dist/ --define "version $(VERSION)" --define "release $(RELEASE)"
 
 ./dist/$(RPM): ./dist/$(SRPM)
 	rm -fr ./dist/$(RPM)
