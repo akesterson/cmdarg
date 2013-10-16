@@ -1,6 +1,6 @@
 #!/bin/bash
 
-bashversion=$(bash --version | head -n 1 | grep -o "version [0-9]" | cut -d ' ' -f 2)
+bashversion=$(${BASH} --version | head -n 1 | grep -o "version [0-9]" | cut -d ' ' -f 2)
 if [ $bashversion -lt 4 ]; then
     echo "cmdarg is incompatible with bash versions < 4.0, please upgrade bash" >&2
     exit 1
@@ -36,8 +36,9 @@ function cmdarg
 	exit 1
     fi
     if  [[ "$(type -t cmdarg_$key)" != "" ]] || \
+	[[ "${CMDARG_FLAGS[$shortopt]}" != "" ]] || \
 	[[ "${CMDARG_TYPES[$key]}" != "" ]]; then
-	echo "command line key '$key' is reserved by cmdarg or defined twice" >&2
+	echo "command line key '$shortopt ($key)' is reserved by cmdarg or defined twice" >&2
 	exit 1
     fi
 
@@ -98,12 +99,11 @@ function cmdarg_info
 
 function cmdarg_describe
 {
-    echo "cmdarg_describe $@" >&2
     local key default
     longopt=${CMDARG[$1]}
     opt=$1
-    if [ "${CMDARG_DEFAULT[$longopt]}" != "" ]; then
-	default="(Default \"${CMDARG_DEFAULT[$longopt]}\")"
+    if [ "${CMDARG_DEFAULT[$opt]}" != "" ]; then
+	default="(Default \"${CMDARG_DEFAULT[$opt]}\")"
     fi
     case ${CMDARG_TYPES[$longopt]} in
 	$CMDARG_TYPE_STRING)
@@ -136,6 +136,7 @@ function cmdarg_usage
     echo
     local key
     if [[ "${!CMDARG_REQUIRED[@]}" != "" ]]; then
+	echo "Required Arguments:"
 	for key in "${CMDARG_REQUIRED[@]}"
 	do
 	    echo "    $(cmdarg_describe $key)"
@@ -143,6 +144,7 @@ function cmdarg_usage
 	echo
     fi
     if [[ "${!CMDARG_OPTIONAL[@]}" != "" ]]; then
+	echo "Optional Arguments":
 	for key in "${CMDARG_OPTIONAL[@]}"
 	do
 	    echo "    $(cmdarg_describe $key)"
