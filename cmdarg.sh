@@ -322,41 +322,34 @@ function cmdarg_purge
     arrays="cmdarg_cfg CMDARG CMDARG_REV CMDARG_OPTIONAL CMDARG_REQUIRED"
     arrays="$arrays CMDARG_DESC CMDARG_DEFAULT CMDARG_VALIDATORS CMDARG_INFO"
     arrays="$arrays CMDARG_FLAGS CMDARG_TYPES"
-    for arr in $arrays
-    do
-	str='${!'"$arr"'[@]}'
-	for key in $(eval "echo $str")
-	do
-	    str="$arr[$key]"
-	    eval "unset $str"
-	done
-    done
+    unset $arr
+    unset $arr[*]
     CMDARG_GETOPTLIST="h"
 }
 
-if [[ "${_DEFINED_CMDARG}" == "" ]]; then
-    export _DEFINED_CMDARG=0
-    # Holds the final map of configuration options
-    declare -A cmdarg_cfg
-    # Maps (short arg) -> (long arg)
-    declare -A CMDARG
-    # Maps (long arg) -> (short arg)
-    declare -A CMDARG_REV
-    # A list of optional arguments (e.g., no :)
-    declare -a CMDARG_OPTIONAL
-    # A list of required arguments (e.g., :)
-    declare -a CMDARG_REQUIRED
-    # Maps (short arg) -> (description)
-    declare -A CMDARG_DESC
-    # Maps (short arg) -> default
-    declare -A CMDARG_DEFAULT
-    # Maps (short arg) -> validator
-    declare -A CMDARG_VALIDATORS
-    # Miscellanious info about this script
-    declare -A CMDARG_INFO
-    # Map of (short arg) -> flags
-    declare -A CMDARG_FLAGS
-    # Map of (short arg) -> type (string, array, hash)
-    declare -A CMDARG_TYPES
+# Holds the final map of configuration options
+declare -A cmdarg_cfg
+# Maps (short arg) -> (long arg)
+declare -A CMDARG
+# Maps (long arg) -> (short arg)
+declare -A CMDARG_REV
+# A list of optional arguments (e.g., no :)
+declare -a CMDARG_OPTIONAL
+# A list of required arguments (e.g., :)
+declare -a CMDARG_REQUIRED
+# Maps (short arg) -> (description)
+declare -A CMDARG_DESC
+# Maps (short arg) -> default
+declare -A CMDARG_DEFAULT
+# Maps (short arg) -> validator
+declare -A CMDARG_VALIDATORS
+# Miscellanious info about this script
+declare -A CMDARG_INFO
+# Map of (short arg) -> flags
+declare -A CMDARG_FLAGS
+# Map of (short arg) -> type (string, array, hash)
+declare -A CMDARG_TYPES
+
+if [[ "${CMDARG_GETOPTLIST}" == "" ]]; then
     CMDARG_GETOPTLIST="h"
 fi
