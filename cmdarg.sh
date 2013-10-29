@@ -324,35 +324,39 @@ function cmdarg_purge
     arrays="$arrays CMDARG_FLAGS CMDARG_TYPES"
     for arr in $arrays
     do
-    	unset $arr
-    	unset $arr[*]
+	str='${!'"$arr"'[@]}'
+	for key in $(eval "echo $str")
+	do
+	    str="$arr[$key]"
+	    eval "unset $str"
+	done
     done
     CMDARG_GETOPTLIST="h"
 }
 
-# Holds the final map of configuration options
-declare -A cmdarg_cfg
-# Maps (short arg) -> (long arg)
-declare -A CMDARG
-# Maps (long arg) -> (short arg)
-declare -A CMDARG_REV
-# A list of optional arguments (e.g., no :)
-declare -a CMDARG_OPTIONAL
-# A list of required arguments (e.g., :)
-declare -a CMDARG_REQUIRED
-# Maps (short arg) -> (description)
-declare -A CMDARG_DESC
-# Maps (short arg) -> default
-declare -A CMDARG_DEFAULT
-# Maps (short arg) -> validator
-declare -A CMDARG_VALIDATORS
-# Miscellanious info about this script
-declare -A CMDARG_INFO
-# Map of (short arg) -> flags
-declare -A CMDARG_FLAGS
-# Map of (short arg) -> type (string, array, hash)
-declare -A CMDARG_TYPES
-
-if [[ "${CMDARG_GETOPTLIST}" == "" ]]; then
+if [[ "${_DEFINED_CMDARG}" == "" ]]; then
+    export _DEFINED_CMDARG=0
+    # Holds the final map of configuration options
+    declare -A cmdarg_cfg
+    # Maps (short arg) -> (long arg)
+    declare -A CMDARG
+    # Maps (long arg) -> (short arg)
+    declare -A CMDARG_REV
+    # A list of optional arguments (e.g., no :)
+    declare -a CMDARG_OPTIONAL
+    # A list of required arguments (e.g., :)
+    declare -a CMDARG_REQUIRED
+    # Maps (short arg) -> (description)
+    declare -A CMDARG_DESC
+    # Maps (short arg) -> default
+    declare -A CMDARG_DEFAULT
+    # Maps (short arg) -> validator
+    declare -A CMDARG_VALIDATORS
+    # Miscellanious info about this script
+    declare -A CMDARG_INFO
+    # Map of (short arg) -> flags
+    declare -A CMDARG_FLAGS
+    # Map of (short arg) -> type (string, array, hash)
+    declare -A CMDARG_TYPES
     CMDARG_GETOPTLIST="h"
 fi
