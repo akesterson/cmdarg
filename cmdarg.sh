@@ -337,26 +337,26 @@ function cmdarg_purge
 if [[ "${_DEFINED_CMDARG}" == "" ]]; then
     export _DEFINED_CMDARG=0
     # Holds the final map of configuration options
-    declare -A cmdarg_cfg
+    declare -xA cmdarg_cfg
     # Maps (short arg) -> (long arg)
-    declare -A CMDARG
+    declare -xA CMDARG
     # Maps (long arg) -> (short arg)
-    declare -A CMDARG_REV
+    declare -xA CMDARG_REV
     # A list of optional arguments (e.g., no :)
-    declare -a CMDARG_OPTIONAL
+    declare -xa CMDARG_OPTIONAL
     # A list of required arguments (e.g., :)
-    declare -a CMDARG_REQUIRED
+    declare -xa CMDARG_REQUIRED
     # Maps (short arg) -> (description)
-    declare -A CMDARG_DESC
+    declare -xA CMDARG_DESC
     # Maps (short arg) -> default
-    declare -A CMDARG_DEFAULT
+    declare -xA CMDARG_DEFAULT
     # Maps (short arg) -> validator
-    declare -A CMDARG_VALIDATORS
+    declare -xA CMDARG_VALIDATORS
     # Miscellanious info about this script
-    declare -A CMDARG_INFO
+    declare -xA CMDARG_INFO
     # Map of (short arg) -> flags
-    declare -A CMDARG_FLAGS
+    declare -xA CMDARG_FLAGS
     # Map of (short arg) -> type (string, array, hash)
-    declare -A CMDARG_TYPES
+    declare -xA CMDARG_TYPES
     CMDARG_GETOPTLIST="h"
 fi
