@@ -322,8 +322,11 @@ function cmdarg_purge
     arrays="cmdarg_cfg CMDARG CMDARG_REV CMDARG_OPTIONAL CMDARG_REQUIRED"
     arrays="$arrays CMDARG_DESC CMDARG_DEFAULT CMDARG_VALIDATORS CMDARG_INFO"
     arrays="$arrays CMDARG_FLAGS CMDARG_TYPES"
-    unset $arr
-    unset $arr[*]
+    for arr in $arrays
+    do
+    	unset $arr
+    	unset $arr[*]
+    done
     CMDARG_GETOPTLIST="h"
 }
 
