@@ -324,12 +324,7 @@ function cmdarg_purge
     arrays="$arrays CMDARG_FLAGS CMDARG_TYPES"
     for arr in $arrays
     do
-	str='${!'"$arr"'[@]}'
-	for key in $(eval "echo $str")
-	do
-	    str="$arr[$key]"
-	    eval "unset $str"
-	done
+	eval "$arr=()"
     done
     CMDARG_GETOPTLIST="h"
 }
