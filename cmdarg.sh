@@ -329,29 +329,26 @@ function cmdarg_purge
     CMDARG_GETOPTLIST="h"
 }
 
-if [[ "${_DEFINED_CMDARG}" == "" ]]; then
-    export _DEFINED_CMDARG=0
-    # Holds the final map of configuration options
-    declare -xA cmdarg_cfg
-    # Maps (short arg) -> (long arg)
-    declare -xA CMDARG
-    # Maps (long arg) -> (short arg)
-    declare -xA CMDARG_REV
-    # A list of optional arguments (e.g., no :)
-    declare -xa CMDARG_OPTIONAL
-    # A list of required arguments (e.g., :)
-    declare -xa CMDARG_REQUIRED
-    # Maps (short arg) -> (description)
-    declare -xA CMDARG_DESC
-    # Maps (short arg) -> default
-    declare -xA CMDARG_DEFAULT
-    # Maps (short arg) -> validator
-    declare -xA CMDARG_VALIDATORS
-    # Miscellanious info about this script
-    declare -xA CMDARG_INFO
-    # Map of (short arg) -> flags
-    declare -xA CMDARG_FLAGS
-    # Map of (short arg) -> type (string, array, hash)
-    declare -xA CMDARG_TYPES
-    CMDARG_GETOPTLIST="h"
-fi
+# Holds the final map of configuration options
+declare -xA cmdarg_cfg
+# Maps (short arg) -> (long arg)
+declare -xA CMDARG
+# Maps (long arg) -> (short arg)
+declare -xA CMDARG_REV
+# A list of optional arguments (e.g., no :)
+declare -xa CMDARG_OPTIONAL
+# A list of required arguments (e.g., :)
+declare -xa CMDARG_REQUIRED
+# Maps (short arg) -> (description)
+declare -xA CMDARG_DESC
+# Maps (short arg) -> default
+declare -xA CMDARG_DEFAULT
+# Maps (short arg) -> validator
+declare -xA CMDARG_VALIDATORS
+# Miscellanious info about this script
+declare -xA CMDARG_INFO
+# Map of (short arg) -> flags
+declare -xA CMDARG_FLAGS
+# Map of (short arg) -> type (string, array, hash)
+declare -xA CMDARG_TYPES
+CMDARG_GETOPTLIST="h"
