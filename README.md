@@ -26,7 +26,14 @@ This function is used to tell the library what command line arguments you accept
     cmdarg 'u:' 'source_ldap_username' 'Source (old) LDAP Username'
     cmdarg 'c:' 'groupmap' 'A CSV file mapping usernames to groups that they should belong to post-conversion' '' 'test -e $OPTARG'
 
-All arguments are OPTIONAL by default. An argument that has ':' on the end of its single character option, and does not specify a default value (empty string is considered "not specified"), is REQUIRED.
+All arguments are OPTIONAL by default. An argument that has ':' on the end of its single character option, and does not specify a default value (empty string is considered "not specified"), is REQUIRED. The arguments can be set on the command line either via '-X' or '--Y', where X is the short option and Y is the long option. Example:
+
+    cmdarg 'r:' 'required-thing' 'Some thing I require'
+
+    # your_script.sh -r some_thingy
+    # your_script.sh --required-thing some_thingy
+
+Because cmdarg does key off of the short options, you are limited to as many unique single characters are in your character set (likely 61 - 26 lower & upper alpha, +9 numerics).
 
 cmdarg_info
 ===========
@@ -46,7 +53,7 @@ This command does what you expect, parsing your command line arguments. However 
 
 ... Beware that "$@" will change depending on your context. So if you have a main() function called in your script, you need to make sure that you pass "$@" from the toplevel script in to it, otherwise the options will be blank when you pass them to cmdarg_parse.
 
-Any argument parsed that has a validator assigned, and whose validator returns nonzero, is considered a failure. Any REQUIRED argument that is not specified is considered a failure.
+Any argument parsed that has a validator assigned, and whose validator returns nonzero, is considered a failure. Any REQUIRED argument that is not specified is considered a failure. However, it is worth noting that if a required argument has a default value, and you provide an empty value to it, we won't know any better and that will be accepted (how do we know you didn't actually *mean* to do that?).
 
 For every argument, a global associative array "cmdarg_cfg" is populated with the long version of the option. E.g., in the example above, '-c' would become ${cmdarg_cfg['groupmap']}, for friendlier access during scripting.
 
@@ -154,3 +161,44 @@ Given some code like this:
     cmdarg_cfg[source_ldap_ou_users]="users"
     cmdarg_cfg[source_ldap]="1"
     cmdarg_cfg[dest_ldap]="1"
+
+Setting arrays and hashes
+=========================
+
+You can use the cmdarg function to accept arrays and hashes from the command line as well. Consider:
+
+    declare -a array
+    declare -A hash
+    cmdarg 'a:[]' 'array' 'Some array you can set indexes in'
+    cmdarg 'H:{}' 'hash' 'Some hash you can set keys in'
+
+
+    your_script -a 32 --array something -H key=value --hash other_key=value
+
+
+    echo ${array[0]}
+    echo ${array[1]}
+    echo ${hash['key']}
+    echo ${hash['other_key']}
+
+The long option names in this form must equal the name of a previously declared array or hash, appropriately. Cmdarg populates that variable directly with options for these arguments.
+
+Positional arguments and --
+===========================
+
+Like any good option parsing framework, cmdarg understands '--' and positional arguments that are meant to be provided without any kind of option parsing applied to them. So if you have:
+
+    myscript.sh -x 0 --longopt thingy file1 file2
+
+... It would seem reasonable to assume that -x and --longopt would be parsed as expected; with arguments of 0 and thingy. But what to do with file1 and file2? cmdarg puts those into a bash indexed array called cmdarg_argv.
+
+Similarly, cmdarg understands '--' which means "stop processing arguments, the rest of this stuff is just to be passed to the program directly". So in this case:
+
+    myscript.sh -x 0 --longopt thingy -- --some-thing-with-dashes
+
+... Cmdarg would parse -x and --longopt as expected, and then ${cmdarg_argv[0]} would hold "--some-thing-with-dashes", for your program to do with what it will.
+
+Tests
+=====
+
+cmdarg is testable by the shunit bash unit testing tool. See the tests/ directory.

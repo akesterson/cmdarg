@@ -161,7 +161,7 @@ function cmdarg_set_opt
     arg="$2"
     case ${CMDARG_TYPES[$key]} in
 	$CMDARG_TYPE_STRING)
-	    cmdarg_cfg[$key]=$OPTARG
+	    cmdarg_cfg[$key]=$arg
 	    ;;
 	$CMDARG_TYPE_BOOLEAN)
 	    cmdarg_cfg[$key]=true
@@ -225,19 +225,46 @@ function cmdarg_parse
     #
     # Call it EXACTLY LIKE THAT, and it will parse your arguments for you.
     # This function only knows about the arguments that you previously called 'cmdarg' for.
-    local OPTIND
+    local OPTIND parsing fullopt opt optarg longopt
 
-    while getopts "$CMDARG_GETOPTLIST" opt "$@"; do
+    parsing=0
+    while [[ "$@" != "" ]]; do
+	optarg=""
+	opt=""
+	longopt=""
+	fullopt=$1
+	shift
+	if [[ "$fullopt" == "--" ]] && [[ $parsing -eq 0 ]]; then
+	    cmdarg_argv+=($@)
+	    break
+	elif [[ "${fullopt:0:2}" == "--" ]]; then
+	    longopt=${fullopt:2}
+	    opt=${CMDARG_REV[$longopt]}
+	elif [[ "${fullopt:0:1}" == "-" ]] && [[ ${#fullopt} -eq 2 ]]; then
+	    opt=${fullopt:1}
+	    longopt=${CMDARG[$opt]}
+	else
+	    echo "Malformed argument: ${fullopt}" >&2
+	    echo "While parsing: $@" >&2
+	    cmdarg_usage
+	    exit 1
+	fi
+
+	if [[ ${CMDARG_FLAGS[$opt]} -eq $CMDARG_FLAG_WITHARG ]]; then
+	    optarg=$1
+	    shift
+	fi
+
     	if [ "$opt" == "h" ]; then
 	    cmdarg_usage
     	    exit 1
     	elif [ ${CMDARG["${opt}"]+abc} ]; then
-	    cmdarg_set_opt "${CMDARG[$opt]}" "$OPTARG"
+	    cmdarg_set_opt "${CMDARG[$opt]}" "$optarg"
     	else
+	    echo "Unknown argument or invalid value : -${opt} | --${longopt}" >&2
     	    cmdarg_usage
     	    exit 1
     	fi
-	OPTARG=""
     done
 
     # --- Don't exit early during validation, tell the user
@@ -254,7 +281,7 @@ function cmdarg_parse
     done
 
     local opt
-    local optarg
+    local OPTARG
     for opt in "${!cmdarg_cfg[@]}"
     do
 	shortopt=${CMDARG_REV[$opt]}
@@ -351,4 +378,6 @@ declare -xA CMDARG_INFO
 declare -xA CMDARG_FLAGS
 # Map of (short arg) -> type (string, array, hash)
 declare -xA CMDARG_TYPES
+# Array of all elements found after --
+declare -xa cmdarg_argv
 CMDARG_GETOPTLIST="h"

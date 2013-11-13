@@ -64,7 +64,7 @@ function shunittest_hash_values
     do
 	cmp="$cmp ${k}=${hash[$k]}"
     done
-    cmp=$(echo "$cmp" | sed s/'^\s*'//)
+    cmp=$(echo "$cmp" | sed s/'^ *'//)
     if [[ "$cmp" != "$base" ]]; then
     	echo "Hash does not contain expected arguments ($cmp vs $base)"
     	cmdarg_dump >&2
