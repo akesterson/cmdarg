@@ -198,6 +198,11 @@ Similarly, cmdarg understands '--' which means "stop processing arguments, the r
 
 ... Cmdarg would parse -x and --longopt as expected, and then ${cmdarg_argv[0]} would hold "--some-thing-with-dashes", for your program to do with what it will.
 
+getopt vs getopts
+=================
+
+cmdarg does not use getopt or getopts for option parsing. Its parser is written in 100% pure bash, and is self contained in cmdarg_parse. It will run the same way anywhere you have bash4.
+
 Tests
 =====
 

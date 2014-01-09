@@ -243,6 +243,9 @@ function cmdarg_parse
 	elif [[ "${fullopt:0:1}" == "-" ]] && [[ ${#fullopt} -eq 2 ]]; then
 	    opt=${fullopt:1}
 	    longopt=${CMDARG[$opt]}
+	elif [[ "${fullopt:0:1}" != "-" ]]; then
+	    cmdarg_argv+=("$fullopt")
+	    continue
 	else
 	    echo "Malformed argument: ${fullopt}" >&2
 	    echo "While parsing: $@" >&2
