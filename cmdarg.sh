@@ -107,16 +107,16 @@ function cmdarg_describe
     fi
     case ${CMDARG_TYPES[$longopt]} in
 	$CMDARG_TYPE_STRING)
-	    echo "-${opt} v : String. ${CMDARG_DESC[$opt]} $default"
+	    echo "-${opt},--${longopt} v : String. ${CMDARG_DESC[$opt]} $default"
 	    ;;
 	$CMDARG_TYPE_BOOLEAN)
-	    echo "-${opt} : Boolean. ${CMDARG_DESC[$opt]} $default"
+	    echo "-${opt},--${longopt} : Boolean. ${CMDARG_DESC[$opt]} $default"
 	    ;;
 	$CMDARG_TYPE_ARRAY)
-	    echo "-${opt} v[, ...]  : Array. ${CMDARG_DESC[$opt]}. Pass this argument multiple times for multiple values. $default"
+	    echo "-${opt},--${longopt} v[, ...] : Array. ${CMDARG_DESC[$opt]}. Pass this argument multiple times for multiple values. $default"
 	    ;;
 	$CMDARG_TYPE_HASH)
-	    echo "-${opt} k=v{, ..} : Hash. ${CMDARG_DESC[$opt]}. Pass this argument multiple times for multiple key/value pairs. $default"
+	    echo "-${opt},--${longopt} k=v{, ..} : Hash. ${CMDARG_DESC[$opt]}. Pass this argument multiple times for multiple key/value pairs. $default"
 	    ;;
 	*)
 	    echo "Unable to return string description for ${key}; unknown type ${CMDARG_TYPES[$opt]}" >&2
@@ -253,15 +253,17 @@ function cmdarg_parse
 	    exit 1
 	fi
 
+    	if [[ "$opt" == "h" ]] || [[ "$longopt" == "help" ]]; then
+	    cmdarg_usage
+    	    exit 1
+    	fi
+
 	if [[ ${CMDARG_FLAGS[$opt]} -eq $CMDARG_FLAG_WITHARG ]]; then
 	    optarg=$1
 	    shift
 	fi
 
-    	if [ "$opt" == "h" ]; then
-	    cmdarg_usage
-    	    exit 1
-    	elif [ ${CMDARG["${opt}"]+abc} ]; then
+	if [ ${CMDARG["${opt}"]+abc} ]; then
 	    cmdarg_set_opt "${CMDARG[$opt]}" "$optarg"
     	else
 	    echo "Unknown argument or invalid value : -${opt} | --${longopt}" >&2
