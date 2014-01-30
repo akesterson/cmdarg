@@ -8,7 +8,8 @@ fi
 
 
 CMDARG_FLAG_NOARG=0
-CMDARG_FLAG_WITHARG=1
+CMDARG_FLAG_REQARG=1
+CMDARG_FLAG_OPTARG=2
 
 CMDARG_TYPE_ARRAY=1
 CMDARG_TYPE_HASH=2
@@ -42,8 +43,12 @@ function cmdarg
 	exit 1
     fi
 
-    if [[ "${1:1:1}" == ":" ]]; then
-	CMDARG_FLAGS[$shortopt]=$CMDARG_FLAG_WITHARG
+    declare -xA argtypemap
+    argtypemap[':']=$CMDARG_FLAG_REQARG
+    argtypemap['?']=$CMDARG_FLAG_OPTARG
+    argtype=${1:1:1}
+    if [[ "$argtype" != "" ]]; then
+	CMDARG_FLAGS[$shortopt]=${argtypemap["$argtype"]}
 	if [[ "${1:2:4}" == "[]" ]]; then
 	    declare -p ${key} >/dev/null 2>&1
 	    if [[ $? -ne 0 ]]; then
@@ -71,7 +76,7 @@ function cmdarg
     CMDARG_REV["$2"]=$shortopt
     CMDARG_DESC["$shortopt"]=$3
     CMDARG_DEFAULT["$shortopt"]=${4:-}
-    if [[ ${CMDARG_FLAGS[$shortopt]} -eq $CMDARG_FLAG_WITHARG ]] && [[ "${4:-}" == "" ]]; then
+    if [[ ${CMDARG_FLAGS[$shortopt]} -eq $CMDARG_FLAG_REQARG ]] && [[ "${4:-}" == "" ]]; then
 	CMDARG_REQUIRED+=($shortopt)
     else
 	CMDARG_OPTIONAL+=($shortopt)
@@ -258,7 +263,7 @@ function cmdarg_parse
     	    exit 1
     	fi
 
-	if [[ ${CMDARG_FLAGS[$opt]} -eq $CMDARG_FLAG_WITHARG ]]; then
+	if [[ ${CMDARG_FLAGS[$opt]} -eq $CMDARG_FLAG_REQARG ]] || [[ ${CMDARG_FLAGS[$opt]} -eq ${CMDARG_FLAG_OPTARG} ]]; then
 	    optarg=$1
 	    shift
 	fi

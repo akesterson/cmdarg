@@ -26,12 +26,22 @@ This function is used to tell the library what command line arguments you accept
     cmdarg 'u:' 'source_ldap_username' 'Source (old) LDAP Username'
     cmdarg 'c:' 'groupmap' 'A CSV file mapping usernames to groups that they should belong to post-conversion' '' 'test -e $OPTARG'
 
-All arguments are OPTIONAL by default. An argument that has ':' on the end of its single character option, and does not specify a default value (empty string is considered "not specified"), is REQUIRED. The arguments can be set on the command line either via '-X' or '--Y', where X is the short option and Y is the long option. Example:
+The first argument to cmdarg must be an argument specification. Argument specifications take the form 'NOT', where:
+
+- N : The single letter Name of the argument
+- O : Whether the option is optional or not. Use ':' here for a required argument, '?' for an optional argument. If you provide a default value for a required argument (:), then it becomes optional.
+- T : The type. Leave empty for a string argument, use '[]' for an array argument, use '{}' for a hash argument.
+
+If O and T are both unset, and only the single letter N is provided, then the argument is a boolean argument which will default to false.
+
+The arguments can be set on the command line either via '-X' or '--Y', where X is the short option and Y is the long option. Example:
 
     cmdarg 'r:' 'required-thing' 'Some thing I require'
+    cmdarg 'o?' 'optional-thing' 'Some optional thing'
+    cmdarg 'b' 'boolean-thing' 'Some boolean thing'
 
-    # your_script.sh -r some_thingy
-    # your_script.sh --required-thing some_thingy
+    # your_script.sh -r some_thingy -b -o optional_thing
+    # your_script.sh --required-thing some_thingy --boolean-thing
 
 Because cmdarg does key off of the short options, you are limited to as many unique single characters are in your character set (likely 61 - 26 lower & upper alpha, +9 numerics).
 
@@ -169,8 +179,8 @@ You can use the cmdarg function to accept arrays and hashes from the command lin
 
     declare -a array
     declare -A hash
-    cmdarg 'a:[]' 'array' 'Some array you can set indexes in'
-    cmdarg 'H:{}' 'hash' 'Some hash you can set keys in'
+    cmdarg 'a?[]' 'array' 'Some array you can set indexes in'
+    cmdarg 'H?{}' 'hash' 'Some hash you can set keys in'
 
 
     your_script -a 32 --array something -H key=value --hash other_key=value
@@ -206,4 +216,4 @@ cmdarg does not use getopt or getopts for option parsing. Its parser is written 
 Tests
 =====
 
-cmdarg is testable by the shunit bash unit testing tool. See the tests/ directory.
+cmdarg is testable by the shunit bash unit testing tool (https://www.github.com/akesterson/shunit/). See the tests/ directory.
