@@ -50,7 +50,7 @@ cmdarg_info
 
 This function sets up information about your program for use when printing the help/usage message. Again, see cmdarg.sh for the latest syntax.
 
-    cmdarg_info "header" "Convert existing LDAP users to the new LDAP server/schema."
+    cmdarg_info "header" "Some script that needed argument parsing"
     cmdarg_info "author" "Some Poor Bastard <somepoorbastard@hell.com>"
     cmdarg_info "copyright" "(C) 2013"
 
@@ -65,7 +65,12 @@ This command does what you expect, parsing your command line arguments. However 
 
 Any argument parsed that has a validator assigned, and whose validator returns nonzero, is considered a failure. Any REQUIRED argument that is not specified is considered a failure. However, it is worth noting that if a required argument has a default value, and you provide an empty value to it, we won't know any better and that will be accepted (how do we know you didn't actually *mean* to do that?).
 
-For every argument, a global associative array "cmdarg_cfg" is populated with the long version of the option. E.g., in the example above, '-c' would become ${cmdarg_cfg['groupmap']}, for friendlier access during scripting.
+For every argument integer, boolean or string argument, a global associative array "cmdarg_cfg" is populated with the long version of the option. E.g., in the example above, '-c' would become ${cmdarg_cfg['groupmap']}, for friendlier access during scripting. For array and hash arguments, you must declare the hash or array beforehand for population:
+
+    declare -a myarray
+    cmdarg 'a?[]' 'myarray' 'Some array of stuff'
+    cmdarg_parse "$@"
+    # Now you will be able to access ${myarray[0]}, ${myarray[1]}, etc. Similarly with hashes, just use declare -A and {}.
 
 I love it when a plan comes together
 ====================================
