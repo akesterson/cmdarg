@@ -230,7 +230,7 @@ function cmdarg_parse
     #
     # Call it EXACTLY LIKE THAT, and it will parse your arguments for you.
     # This function only knows about the arguments that you previously called 'cmdarg' for.
-    local OPTIND parsing fullopt opt optarg longopt
+    local OPTIND parsing fullopt opt optarg longopt tmpopt
 
     parsing=0
     while [[ "$@" != "" ]]; do
@@ -238,7 +238,15 @@ function cmdarg_parse
 	opt=""
 	longopt=""
 	fullopt=$1
+	is_equals_arg=1
 	shift
+	if [[ "${fullopt}"  =~ ^(--[a-zA-Z0-9_\-]+|^-[a-zA-Z0-9])= ]]; then
+	    tmpopt=$fullopt
+	    fullopt=$(echo "$tmpopt" | cut -d = -f 1)
+	    optarg=$(echo "$tmpopt" | cut -d = -f 2)
+	    is_equals_arg=0
+	fi
+
 	if [[ "$fullopt" == "--" ]] && [[ $parsing -eq 0 ]]; then
 	    cmdarg_argv+=($@)
 	    break
@@ -263,9 +271,12 @@ function cmdarg_parse
     	    exit 1
     	fi
 
-	if [[ ${CMDARG_FLAGS[$opt]} -eq $CMDARG_FLAG_REQARG ]] || [[ ${CMDARG_FLAGS[$opt]} -eq ${CMDARG_FLAG_OPTARG} ]]; then
-	    optarg=$1
-	    shift
+	if [[ $is_equals_arg -eq 1 ]]; then
+	    if [[ ${CMDARG_FLAGS[$opt]} -eq $CMDARG_FLAG_REQARG ]] || \
+		[[ ${CMDARG_FLAGS[$opt]} -eq ${CMDARG_FLAG_OPTARG} ]]; then
+		optarg=$1
+		shift
+	    fi
 	fi
 
 	if [ ${CMDARG["${opt}"]+abc} ]; then
