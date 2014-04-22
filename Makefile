@@ -52,7 +52,7 @@ $(DISTFILE): version.sh
 $(RHEL_DISTFILE): $(DISTFILE)
 	cd dist && ln -s .$(DISTFILE) .$(RHEL_DISTFILE)
 
-./dist/$(SRPM): $(DISTFILE)
+./dist/$(SRPM): $(RHEL_DISTFILE)
 	rm -fr ./dist/$(SRPM)
 	mock --buildsrpm --spec $(SPECFILE) $(MOCKFLAGS) --sources ./dist/ --resultdir ./dist/ --define "version $(VERSION)" --define "release $(RHEL_RELEASE)"
 
