@@ -2,7 +2,6 @@ VERSION:=$(shell if [ -d .git ]; then bash -c 'gitversion.sh | grep "^MAJOR=" | 
 RELEASE:=$(shell if [ -d .git ]; then bash -c 'gitversion.sh | grep "^BUILD=" | cut -d = -f 2'; else source version.sh && echo $$BUILD ; fi)
 DISTFILE=./dist/cmdarg-$(VERSION)-$(RELEASE).tar.gz
 SPECFILE=cmdarg.spec
-SRPM=cmdarg-$(VERSION)-$(RELEASE).src.rpm
 ifndef RHEL_VERSION
 	RHEL_VERSION=5
 endif
@@ -10,7 +9,9 @@ ifeq ($(RHEL_VERSION),5)
         MOCKFLAGS=--define "_source_filedigest_algorithm md5" --define "_binary_filedigest_algorithm md5"
 endif
 
-RPM=cmdarg-$(VERSION)-$(RELEASE).noarch.rpm
+RHEL_RELEASE:=$(RELEASE).el$(RHEL_VERSION)
+SRPM=cmdarg-$(VERSION)-$(RHEL_RELEASE).src.rpm
+RPM=cmdarg-$(VERSION)-$(RHEL_RELEASE).noarch.rpm
 
 ifndef PREFIX
 	PREFIX=''
@@ -49,11 +50,11 @@ $(DISTFILE): version.sh
 
 ./dist/$(SRPM): $(DISTFILE)
 	rm -fr ./dist/$(SRPM)
-	mock --buildsrpm --spec $(SPECFILE) $(MOCKFLAGS) --sources ./dist/ --resultdir ./dist/ --define "version $(VERSION)" --define "release $(RELEASE)"
+	mock --buildsrpm --spec $(SPECFILE) $(MOCKFLAGS) --sources ./dist/ --resultdir ./dist/ --define "version $(VERSION)" --define "release $(RHEL_RELEASE)"
 
 ./dist/$(RPM): ./dist/$(SRPM)
 	rm -fr ./dist/$(RPM)
-	mock -r epel-$(RHEL_VERSION)-noarch ./dist/$(SRPM) --resultdir ./dist/ --define "version $(VERSION)" --define "release $(RELEASE)"
+	mock -r epel-$(RHEL_VERSION)-noarch ./dist/$(SRPM) --resultdir ./dist/ --define "version $(VERSION)" --define "release $(RHEL_RELEASE)"
 
 uninstall:
 	rm -f $(PREFIX)/usr/lib/cmdarg.sh
