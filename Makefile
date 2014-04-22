@@ -50,7 +50,7 @@ $(DISTFILE): version.sh
 	cd dist && tar -czvf ../$@ cmdarg-$(VERSION)-$(RELEASE)
 
 $(RHEL_DISTFILE): $(DISTFILE)
-	cd dist && ln -s .$(DISTFILE) .$(RHEL_DISTFILE)
+	cp $(DISTFILE) $(RHEL_DISTFILE)
 
 ./dist/$(SRPM): $(RHEL_DISTFILE)
 	rm -fr ./dist/$(SRPM)
