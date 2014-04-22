@@ -1,7 +1,7 @@
 cmdarg
 ======
 
-[![Build Status](http://jenkins.aklabs.net/buildStatus/icon?job=cmdarg - rpm)](http://jenkins.aklabs.net/job/cmdarg%20-%20rpm/)
+[![Build Status](http://jenkins.aklabs.net/buildStatus/icon?job=cmdarg-test)](http://jenkins.aklabs.net/job/cmdarg-test/)
 
 Requires bash >= 4.
 
