@@ -12,6 +12,7 @@ endif
 RHEL_RELEASE:=$(RELEASE).el$(RHEL_VERSION)
 SRPM=cmdarg-$(VERSION)-$(RHEL_RELEASE).src.rpm
 RPM=cmdarg-$(VERSION)-$(RHEL_RELEASE).noarch.rpm
+RHEL_DISTFILE=./dist/cmdarg-$(VERSION)-$(RHEL_RELEASE).tar.gz
 
 ifndef PREFIX
 	PREFIX=''
@@ -47,6 +48,9 @@ $(DISTFILE): version.sh
 	mkdir dist/cmdarg-$(VERSION)-$(RELEASE) || rm -fr dist/cmdarg-$(VERSION)-$(RELEASE)
 	rsync -aWH . --exclude=.git --exclude=dist ./dist/cmdarg-$(VERSION)-$(RELEASE)/
 	cd dist && tar -czvf ../$@ cmdarg-$(VERSION)-$(RELEASE)
+
+$(RHEL_DISTFILE): $(DISTFILE)
+	cd dist && ln -s .$(DISTFILE) .$(RHEL_DISTFILE)
 
 ./dist/$(SRPM): $(DISTFILE)
 	rm -fr ./dist/$(SRPM)
