@@ -9,6 +9,19 @@ Requires bash >= 4.
 
 Enjoy
 
+Installation
+============
+
+From source
+
+    cd cmdarg
+    make install
+
+From RPM
+
+    # add http://yum.aklabs.net/el/[5|6] as a yum repo for your system
+    yum install cmdarg
+
 Usage
 =====
 
