@@ -80,6 +80,39 @@ For array and hash arguments, you must declare the hash or array beforehand for 
     cmdarg_parse "$@"
     # Now you will be able to access ${myarray[0]}, ${myarray[1]}, etc. Similarly with hashes, just use declare -A and {}.
 
+Automatic help messages
+=======================
+
+cmdarg takes the pain out of creating your --help messages. For example, consider you had this script:
+
+    #!/bin/bash
+    source /usr/lib/cmdarg.sh
+    declare -a myarray
+    
+    cmdarg_info "header" "Some script that needed argument parsing"
+    cmdarg_info "author" "Some Poor Bastard <somepoorbastard@hell.com>"
+    cmdarg_info "copyright" "(C) 2013"
+    cmdarg 'R:' 'required-thing' 'Some thing I REALLY require'
+    cmdarg 'r:' 'required-thing-with-default' 'Some thing I require' 'Some default'
+    cmdarg 'o?' 'optional-thing' 'Some optional thing'
+    cmdarg 'b' 'boolean-thing' 'Some boolean thing'
+    cmdarg 'a?[]' 'myarray' 'Some array of stuff'
+    cmdarg_parse "$@"
+    
+... And you ran it with '--help', you would get a nice preformatted help message: 
+
+    test.sh (C) 2013 : Some Poor Bastard <somepoorbastard@hell.com>
+    
+    Some script that needed argument parsing
+    
+    Required Arguments:
+        -R,--required-thing v : String. Some thing I REALLY require 
+    
+    Optional Arguments:
+        -r,--required-thing-with-default v : String. Some thing I require (Default "Some default")
+        -o,--optional-thing v : String. Some optional thing 
+        -b,--boolean-thing : Boolean. Some boolean thing 
+        -a,--myarray v[, ...] : Array. Some array of stuff. Pass this argument multiple times for multiple values. 
 
 Setting arrays and hashes
 =========================
