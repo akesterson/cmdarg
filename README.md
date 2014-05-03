@@ -19,7 +19,7 @@ From source
 
 From RPM
 
-    # add http://yum.aklabs.net/el/[5|6] as a yum repo for your system
+    # add http://yum.aklabs.net/el/[5|6]/noarch as a yum repo for your system
     yum install cmdarg
 
 Usage
