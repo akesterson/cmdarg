@@ -67,117 +67,19 @@ This command does what you expect, parsing your command line arguments. However 
 
 Any argument parsed that has a validator assigned, and whose validator returns nonzero, is considered a failure. Any REQUIRED argument that is not specified is considered a failure. However, it is worth noting that if a required argument has a default value, and you provide an empty value to it, we won't know any better and that will be accepted (how do we know you didn't actually *mean* to do that?).
 
-For every argument integer, boolean or string argument, a global associative array "cmdarg_cfg" is populated with the long version of the option. E.g., in the example above, '-c' would become ${cmdarg_cfg['groupmap']}, for friendlier access during scripting. For array and hash arguments, you must declare the hash or array beforehand for population:
+For every argument integer, boolean or string argument, a global associative array "cmdarg_cfg" is populated with the long version of the option. E.g., in the example above, '-c' would become ${cmdarg_cfg['groupmap']}, for friendlier access during scripting. 
+
+    cmdarg 'x:' 'some required thing'
+    cmdarg_parse "$@"
+    echo ${cmdarg_cfg['x']}
+
+For array and hash arguments, you must declare the hash or array beforehand for population:
 
     declare -a myarray
     cmdarg 'a?[]' 'myarray' 'Some array of stuff'
     cmdarg_parse "$@"
     # Now you will be able to access ${myarray[0]}, ${myarray[1]}, etc. Similarly with hashes, just use declare -A and {}.
 
-I love it when a plan comes together
-====================================
-
-Given some code like this:
-
-    cmdarg_info "header" "Convert existing old LDAP users to the new LDAP server/schema."
-    cmdarg_info "author" "Some Poor Bastard <somepoorbastard@hell.com>"
-    cmdarg_info "copyright" "(C) 2013"
-
-    cmdarg 'C:' 'cfgfile' 'Config file that contains options that should be used in place of command line args' '' 'test -e $OPTARG'
-    cmdarg 'c:' 'groupmap' 'A CSV file mapping usernames to groups that they should belong to post-conversion' '' 'test -e $OPTARG'
-    cmdarg 'l:' 'source_ldap' 'Source (old) LDAP URI'
-    cmdarg 'u:' 'source_ldap_username' 'Source (old) LDAP Username'
-    cmdarg 'p:' 'source_ldap_password' 'Source (old) LDAP Password'
-    cmdarg 'b:' 'source_ldap_basedn' 'Source (old) LDAP Base DN (ou=x,dc=x,dc=x)'
-    cmdarg 'o:' 'source_ldap_ou_users' 'Source (old) LDAP ou for Users' 'users'
-    cmdarg 'g:' 'source_ldap_ou_groups' 'Source (old) LDAP ou for Groups' 'groups'
-    cmdarg 'L:' 'dest_ldap' 'Destination (new) LDAP URI'
-    cmdarg 'U:' 'dest_ldap_username' 'Destination (new) LDAP Username'
-    cmdarg 'P:' 'dest_ldap_password' 'Destination (new) LDAP Password'
-    cmdarg 'B:' 'dest_ldap_basedn' 'Destination (new) LDAP Base DN (dc=x,dc=x)'
-    cmdarg 'O:' 'source_ldap_ou_users' 'Destination (new) LDAP ou for Users' 'users'
-    cmdarg 'G:' 'source_ldap_ou_groups' 'Destination (new) LDAP ou for Groups' 'groups'
-    cmdarg 's:' 'slappasswd_salt' 'Slappasswd salt format (man slappasswd)' 'rofflewaffles%s'
-    cmdarg 'S:' 'slappasswd_scheme' 'Slappasswwd hash scheme to use (CRYPT|MD5|SMD5|SSHA|SHA)' 'SSHA' 'echo $OPTARG | grep -E "CRYPT|MD5|SMD5|SSHA|SHA" >/dev/null 2>&1'
-
-    cmdarg_parse "$@"
-
-... Here's what we can expect to see from the usage message:
-
-    $ ./ldap-convert.sh  -h
-    ldap-convert.sh (C) 2013 : Some Poor Bastard <somepoorbastard@hell.com>
-
-    Convert existing LDAP users to the new LDAP server/schema.
-
-    Required Arguments:
-	-C : Config file that contains options that should be used in place of command line args
-	-c : A CSV file mapping usernames to groups that they should belong to post-conversion
-	-l : Source (old) LDAP URI
-	-u : Source (old) LDAP Username
-	-p : Source (old) LDAP Password
-	-b : Source (old) LDAP Base DN (ou=x,dc=x,dc=x)
-	-L : Destination (new) LDAP URI
-	-U : Destination (new) LDAP Username
-	-P : Destination (new) LDAP Password
-	-B : Destination (new) LDAP Base DN (dc=x,dc=x)
-
-    Optional Arguments:
-	-o : Source (old) LDAP ou for Users (Default "users")
-	-g : Source (old) LDAP ou for Groups (Default "groups")
-	-O : Destination (new) LDAP ou for Users (Default "users")
-	-G : Destination (new) LDAP ou for Groups (Default "groups")
-	-s : Slappasswd salt format (man slappasswd) (Default "rofflewaffles%s")
-	-S : Slappasswwd hash scheme to use (CRYPT|MD5|SMD5|SSHA|SHA) (Default "SSHA")
-
-... And if we run it without '-h', then the argument parser (rather helpfully) tells us which arguments we've failed to specify, before printing the help:
-
-    $ ./ldap-convert.sh
-    Invalid value for -c :
-    Invalid value for -C :
-    Missing arguments :  -C -c -l -u -p -b -L -U -P -B
-
-    ldap-convert.sh (C) 2013 : Some Poor Bastard <somepoorbastard@hell.com>
-
-    Convert existing LDAP users to the new LDAP server/schema.
-
-    Required Arguments:
-	-C : Config file that contains options that should be used in place of command line args
-	-c : A CSV file mapping usernames to groups that they should belong to post-conversion
-	-l : Source (old) LDAP URI
-	-u : Source (old) LDAP Username
-	-p : Source (old) LDAP Password
-	-b : Source (old) LDAP Base DN (ou=x,dc=x,dc=x)
-	-L : Destination (new) LDAP URI
-	-U : Destination (new) LDAP Username
-	-P : Destination (new) LDAP Password
-	-B : Destination (new) LDAP Base DN (dc=x,dc=x)
-
-    Optional Arguments:
-	-o : Source (old) LDAP ou for Users (Default "users")
-	-g : Source (old) LDAP ou for Groups (Default "groups")
-	-O : Destination (new) LDAP ou for Users (Default "users")
-	-G : Destination (new) LDAP ou for Groups (Default "groups")
-	-s : Slappasswd salt format (man slappasswd) (Default "rofflewaffles%s")
-	-S : Slappasswwd hash scheme to use (CRYPT|MD5|SMD5|SSHA|SHA) (Default "SSHA")
-
-... And here's what the cmdarg_cfg associate array winds up holding, illustrated with some debug prints:
-
-    $ ./ldap-convert.sh -c ./users_groups_map.csv -l 1 -u 1 -p 1 -b 1 -L 1 -U 1 -P 1 -B 1
-
-    cmdarg_cfg[groupmap]="./users_groups_map.csv"
-    cmdarg_cfg[slappasswd_salt]="rofflewaffles%s"
-    cmdarg_cfg[source_ldap_ou_groups]="groups"
-    cmdarg_cfg[slappasswd_scheme]="SSHA"
-    cmdarg_cfg[dest_ldap_username]="1"
-    cmdarg_cfg[dest_ldap_password]="1"
-    cmdarg_cfg[source_ldap_password]="1"
-    cmdarg_cfg[source_ldap_username]="1"
-    cmdarg_cfg[cfgfile]="/dev/null"
-    cmdarg_cfg[dest_ldap_basedn]="1"
-    cmdarg_cfg[source_ldap_basedn]="1"
-    cmdarg_cfg[source_ldap_ou_users]="users"
-    cmdarg_cfg[source_ldap]="1"
-    cmdarg_cfg[dest_ldap]="1"
 
 Setting arrays and hashes
 =========================
@@ -198,7 +100,7 @@ You can use the cmdarg function to accept arrays and hashes from the command lin
     echo ${hash['key']}
     echo ${hash['other_key']}
 
-The long option names in this form must equal the name of a previously declared array or hash, appropriately. Cmdarg populates that variable directly with options for these arguments.
+The long option names in this form must equal the name of a previously declared array or hash, appropriately. Cmdarg populates that variable directly with options for these arguments. Remember, arrays and hashes must be declared beforehand and must have the same name as the long argument given to their cmdarg option.
 
 Positional arguments and --
 ===========================
