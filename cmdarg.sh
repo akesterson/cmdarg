@@ -1,8 +1,7 @@
 #!/bin/bash
 
-bashversion=$(${BASH} --version | head -n 1 | grep -o "version [0-9]" | cut -d ' ' -f 2)
-if [ $bashversion -lt 4 ]; then
-    echo "cmdarg is incompatible with bash versions < 4.0, please upgrade bash" >&2
+if (( BASH_VERSINFO[0] < 4 )); then
+    echo "cmdarg is incompatible with bash versions < 4, please upgrade bash" >&2
     exit 1
 fi
 
