@@ -72,3 +72,13 @@ function shunittest_hash_values
     fi
     return $?
 }
+
+function shunittest_boolean_no_optarg
+{
+    cmdarg_purge
+    cmdarg 'b' 'boolean'
+    cmdarg_parse -b something
+    cmdarg_dump
+    [[ "${cmdarg_cfg['boolean']}" == "true" ]] || return 1
+    [[ "${cmdarg_argv[0]}" == "something" ]] || return 1
+}
