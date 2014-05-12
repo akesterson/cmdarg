@@ -262,12 +262,12 @@ function cmdarg_parse
 	else
 	    echo "Malformed argument: ${fullopt}" >&2
 	    echo "While parsing: $@" >&2
-	    cmdarg_usage
+	    cmdarg_usage >&2
 	    exit 1
 	fi
 
     	if [[ "$opt" == "h" ]] || [[ "$longopt" == "help" ]]; then
-	    cmdarg_usage
+	    cmdarg_usage >&2
     	    exit 1
     	fi
 
@@ -283,7 +283,7 @@ function cmdarg_parse
 	    cmdarg_set_opt "${CMDARG[$opt]}" "$optarg"
     	else
 	    echo "Unknown argument or invalid value : -${opt} | --${longopt}" >&2
-    	    cmdarg_usage
+    	    cmdarg_usage >&2
     	    exit 1
     	fi
     done
@@ -320,7 +320,7 @@ function cmdarg_parse
 	    echo "Missing arguments : ${missing}"
 	fi
 	echo
-	cmdarg_usage
+	cmdarg_usage >&2
 	exit 1
     fi
 
