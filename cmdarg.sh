@@ -177,14 +177,11 @@ function cmdarg_set_opt
 	    eval "${arrname}[$((prevlen + 1))]=\"$arg\""
 	    ;;
 	$CMDARG_TYPE_HASH)
-	    arrname="${key}"
-	    # Want to know WTF I named this variable like this?
-	    # http://stackoverflow.com/questions/10258686/bash-associative-array-error
-	    # ... Apparently there is a bug in bash.
-	    cmdarghashkeythingy31337=$(echo "$arg" | cut -d = -f 1)
-	    v=$(echo "$arg" | cut -d = -f 2-)
-	    lval="${arrname}['${cmdarghashkeythingy31337}']"
-	    eval "$lval=\"$v\""
+	    local arrname=${key}
+	    declare -gA -- "$arrname"
+	    local k=${arg%%=*}
+	    local v=${arg#*=}
+	    eval "$arrname[\$k]=\$v"
 	    ;;
 	*)
 	    echo "Unable to return string description for ${key}; unknown type ${CMDARG_TYPES[$key]}" >&2
