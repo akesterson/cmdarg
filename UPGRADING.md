@@ -9,10 +9,10 @@ In 1.0, argument validators were a somewhat documented, but unpublished feature 
 
     cmdarg 'x' 'some-arg' 'some description' '' 'echo $OPTARG | grep ...'
 
-... To this format:
+... To this format, which will work in both 1.0 and 2.0 versions:
 
     function my_grep_validator {
-        echo $1 | grep ...
+        echo ${1:-$OPTARG} | grep ...
     }
 
     cmdarg 'x' 'some-arg' 'some description' '' my_grep_validator
