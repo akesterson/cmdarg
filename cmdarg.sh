@@ -42,7 +42,7 @@ function cmdarg
 	exit 1
     fi
 
-    declare -xA argtypemap
+    declare -A argtypemap
     argtypemap[':']=$CMDARG_FLAG_REQARG
     argtypemap['?']=$CMDARG_FLAG_OPTARG
     argtype=${1:1:1}
@@ -81,7 +81,13 @@ function cmdarg
 	CMDARG_OPTIONAL+=($shortopt)
     fi
     cmdarg_cfg["$2"]="${4:-}"
-    CMDARG_VALIDATORS["$shortopt"]="${5:-}"
+    local validatorfunc
+    validatorfunc=${5:-}
+    if [[ "$validatorfunc" != "" ]] && [[ "$(declare -F $validatorfunc)" == "" ]]; then
+	echo "Validators must be bash functions accepting 1 argument (not '$validatorfunc')" >&2
+	exit 1
+    fi
+    CMDARG_VALIDATORS["$shortopt"]="$validatorfunc"
     CMDARG_GETOPTLIST="${CMDARG_GETOPTLIST}$1"
 }
 
@@ -304,7 +310,7 @@ function cmdarg_parse
 	shortopt=${CMDARG_REV[$opt]}
     	if [ "${CMDARG_VALIDATORS[$shortopt]}" != "" ]; then
     	    OPTARG=${cmdarg_cfg[$opt]}
-	    ( eval "${CMDARG_VALIDATORS[${shortopt}]}" && [ "$OPTARG" != "" ])
+	    ( ( ${CMDARG_VALIDATORS[${shortopt}]} "$OPTARG" ) && [ "$OPTARG" != "" ])
 	    if [ $? -ne 0 ]; then
 		echo "Invalid value for -$shortopt : ${cmdarg_cfg[$opt]}"
 		failed=1
