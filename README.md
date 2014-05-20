@@ -167,6 +167,8 @@ cmdarg takes the pain out of creating your --help messages. For example, conside
         -b,--boolean-thing : Boolean. Some boolean thing
         -a,--myarray v[, ...] : Array. Some array of stuff. Pass this argument multiple times for multiple values.
 
+You can change the formatting of help messages with helper functions. (see Helpers, below).
+
 Setting arrays and hashes
 =========================
 
@@ -202,6 +204,40 @@ Similarly, cmdarg understands '--' which means "stop processing arguments, the r
     myscript.sh -x 0 --longopt thingy -- --some-thing-with-dashes
 
 ... Cmdarg would parse -x and --longopt as expected, and then ${cmdarg_argv[0]} would hold "--some-thing-with-dashes", for your program to do with what it will.
+
+Helpers
+=======
+
+cmdarg is meant to be extensible by default, so there are some places where you can hook into it to change cmdarg's behavior. By changing the members of the cmdarg_helpers hash, like this:
+
+    # Change the way arguments are described in --help
+    cmdarg_helpers['describe']=my_description_function
+    # Completely replace cmdarg's builtin --help message generator with your own
+    cmdarg_helpers['usage']=my_usage_function
+
+## Description Helper
+
+The description helper is used when you are happy with the overall structure of how cmdarg prints your usage message (header, required, optional, footer), but you want to change the way that individual arguments are described. You can do this by setting cmdarg_helpers['describe'] to the name of a bash function which accepts the following parameters (in order):
+
+* $1 : long option to be described
+* $2 : short option to be described
+* $3 : argument type being described (will be one of ${CMDARG_TYPE_STRING}, ${CMDARG_TYPE_BOOLEAN}, ${CMDARG_TYPE_ARRAY} or ${CMDARG_TYPE_HASH})
+* $4 : any default value that is set for the option being described
+* $5 : The description for the option being described (as provided to 'cmdarg' previously)
+* $6 : Flags for the option being described (a logically OR'ed bitmask of ${CMDARG_FLAG_NOARG}, ${CMDARG_FLAG_REQARG}, or ${CMDARG_FLAG_OPTARG} - although we specify this as a bitmask and advise you to treat it as such, in practice, this is usually an assignment of one of those 3 values)
+* $7 : The name of any validator (if any) set for the option being described
+
+This is every piece of information cmdarg keeps related to an argument (aside from its value). You can use these to describe the argument however you please. Your function must print the text description to stdout. The return value of your function is ignored.
+
+For examples of this behavior, please see ./tests/test_helpers.sh
+
+## Usage Helper
+
+The usage helper is used when you want to completely override cmdarg's built in --help handler. Note that, when you override the usage helper, you will no longer benefit from the description helper, since that is called from inside of the default usage handler. If you override the usage helper, you will have to implement 100% of --help functionality on your own.
+
+The short options for all specified arguments in cmdarg are kept in a hash ${CMDARG} which maps short arguments (-x) to long arguments (--long-version-of-x). However, it is not recommended that you iterate over this hash directly, as the order of hash key iteration is not guaranteed, so your --help message will change every time. To help with this, cmdarg populates two one-dimensional arrays, CMDARG_OPTIONAL and CMDARG_REQUIRED with the short options of all optional and require arguments, respectively. It is recommended that you iterate over these arrays instead of CMDARG to ensure an ordered output. It is further recommended that you still utilize cmdarg_describe to describe each individual argument, since this abstracts away the logic of how to get the flags, the type, etc of the argument, and lets you continue to provide a standard interface for your API developer(s).
+
+For examples of this behavior, please see ./tests/test_helpers.sh, the "shunittest_test_describe_and_usage_helper" function.
 
 getopt vs getopts
 =================

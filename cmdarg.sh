@@ -7,8 +7,8 @@ fi
 
 
 CMDARG_FLAG_NOARG=0
-CMDARG_FLAG_REQARG=1
-CMDARG_FLAG_OPTARG=2
+CMDARG_FLAG_REQARG=2
+CMDARG_FLAG_OPTARG=4
 
 CMDARG_TYPE_ARRAY=1
 CMDARG_TYPE_HASH=2
@@ -93,7 +93,7 @@ function cmdarg
 
 function cmdarg_info
 {
-    # cmdarg <flag> <value>
+    # cmdarg_info <flag> <value>
     #
     # Sets various flags about your script that are printed during cmdarg_usage
     #
@@ -109,30 +109,53 @@ function cmdarg_info
 
 function cmdarg_describe
 {
-    local key default
+    local longopt opt argtype default description flags validator
     longopt=${CMDARG[$1]}
     opt=$1
-    if [ "${CMDARG_DEFAULT[$opt]}" != "" ]; then
-	default="(Default \"${CMDARG_DEFAULT[$opt]}\")"
+    argtype=${CMDARG_TYPES[$longopt]}
+    default=${CMDARG_DEFAULT[$opt]}
+    description=${CMDARG_DESC[$opt]}
+    flags="${CMDARG_FLAGS[$opt]}"
+    validator="${CMDARG_VALIDATORS[$opt]}"
+
+    ${cmdarg_helpers['describe']} $longopt $opt $argtype "${default}" "${description}" "${flags}" "${validator}"
+}
+
+function cmdarg_describe_default
+{
+    set -u
+    local longopt opt argtype default description flags validator
+    longopt=$1
+    opt=$2
+    argtype=$3
+    default="$4"
+    description="$5"
+    flags="$6"
+    validator="${7:-}"
+    set +u
+
+    if [ "${default}" != "" ]; then
+	default="(Default \"${default}\")"
     fi
-    case ${CMDARG_TYPES[$longopt]} in
+    case ${argtype} in
 	$CMDARG_TYPE_STRING)
-	    echo "-${opt},--${longopt} v : String. ${CMDARG_DESC[$opt]} $default"
+	    echo "-${opt},--${longopt} v : String. ${description} ${default}"
 	    ;;
 	$CMDARG_TYPE_BOOLEAN)
-	    echo "-${opt},--${longopt} : Boolean. ${CMDARG_DESC[$opt]} $default"
+	    echo "-${opt},--${longopt} : Boolean. ${description} ${default}"
 	    ;;
 	$CMDARG_TYPE_ARRAY)
-	    echo "-${opt},--${longopt} v[, ...] : Array. ${CMDARG_DESC[$opt]}. Pass this argument multiple times for multiple values. $default"
+	    echo "-${opt},--${longopt} v[, ...] : Array. ${description}. Pass this argument multiple times for multiple values. ${default}"
 	    ;;
 	$CMDARG_TYPE_HASH)
-	    echo "-${opt},--${longopt} k=v{, ..} : Hash. ${CMDARG_DESC[$opt]}. Pass this argument multiple times for multiple key/value pairs. $default"
+	    echo "-${opt},--${longopt} k=v{, ..} : Hash. ${description}. Pass this argument multiple times for multiple key/value pairs. ${default}"
 	    ;;
 	*)
-	    echo "Unable to return string description for ${key}; unknown type ${CMDARG_TYPES[$opt]}" >&2
+	    echo "Unable to return string description for ${opt}; unknown type ${argtype}" >&2
 	    exit 1
 	    ;;
     esac
+
 }
 
 function cmdarg_usage
@@ -264,12 +287,12 @@ function cmdarg_parse
 	else
 	    echo "Malformed argument: ${fullopt}" >&2
 	    echo "While parsing: $@" >&2
-	    cmdarg_usage >&2
+	    ${cmdarg_helpers['usage']} >&2
 	    exit 1
 	fi
 
     	if [[ "$opt" == "h" ]] || [[ "$longopt" == "help" ]]; then
-	    cmdarg_usage >&2
+	    ${cmdarg_helpers['usage']} >&2
     	    exit 1
     	fi
 
@@ -285,7 +308,7 @@ function cmdarg_parse
 	    cmdarg_set_opt "${CMDARG[$opt]}" "$optarg"
     	else
 	    echo "Unknown argument or invalid value : -${opt} | --${longopt}" >&2
-    	    cmdarg_usage >&2
+    	    ${cmdarg_helpers['usage']} >&2
     	    exit 1
     	fi
     done
@@ -322,7 +345,7 @@ function cmdarg_parse
 	    echo "Missing arguments : ${missing}"
 	fi
 	echo
-	cmdarg_usage >&2
+	${cmdarg_helpers['usage']} >&2
 	exit 1
     fi
 
@@ -403,4 +426,9 @@ declare -xA CMDARG_FLAGS
 declare -xA CMDARG_TYPES
 # Array of all elements found after --
 declare -xa cmdarg_argv
+# Hash of functions that are used for user-extensible functionality
+declare -xA cmdarg_helpers
+cmdarg_helpers['describe']=cmdarg_describe_default
+cmdarg_helpers['usage']=cmdarg_usage
+
 CMDARG_GETOPTLIST="h"
