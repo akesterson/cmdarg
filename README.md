@@ -100,6 +100,14 @@ For example, this is a valid validator:
 
     cmdarg 'x' 'x-option' 'some opt' '' "grep -E '^[0-9]+$'"
 
+There is an exception to this form, and that is for hash arguments (e.g. 'x:{}'). In this instance, the key for the argument (e.g. -x key=value) is to be considered a part of the value, and the user may want to validate this as well as the value. In this instance, when calling a validator against a hash argument, the validator will receive a second argument, which is the key of the hash being validated. For example:
+
+    # When we receive
+    cmdarg 'x:{}' 'something' 'something' my_validator
+    cmdarg_parse -x hashkey=hashvalue
+    # ... we will call
+    my_validator hashvalue hashkey
+
 cmdarg_info
 ===========
 
@@ -238,6 +246,21 @@ The usage helper is used when you want to completely override cmdarg's built in 
 The short options for all specified arguments in cmdarg are kept in a hash ${CMDARG} which maps short arguments (-x) to long arguments (--long-version-of-x). However, it is not recommended that you iterate over this hash directly, as the order of hash key iteration is not guaranteed, so your --help message will change every time. To help with this, cmdarg populates two one-dimensional arrays, CMDARG_OPTIONAL and CMDARG_REQUIRED with the short options of all optional and require arguments, respectively. It is recommended that you iterate over these arrays instead of CMDARG to ensure an ordered output. It is further recommended that you still utilize cmdarg_describe to describe each individual argument, since this abstracts away the logic of how to get the flags, the type, etc of the argument, and lets you continue to provide a standard interface for your API developer(s).
 
 For examples of this behavior, please see ./tests/test_helpers.sh, the "shunittest_test_describe_and_usage_helper" function.
+
+Controlling cmdarg's behavior on error
+======================================
+
+By default, whenever something happens that cmdarg doesn't like, it will 'return 1' up the stack to the caller. This is different from the old behavior in v1.0, which would 'exit 1'. You can control cmdarg's error behavior by setting the CMDARG_ERROR_BEHAVIOR variable to the function/builtin you want called whenever an error is encountered.
+
+To get the old v1.0 behavior back, you can, before calling any cmdarg functions:
+
+    CMDARG_ERROR_BEHAVIOR=exit
+
+If you want cmdarg to call some function of your own when it encounters an error, you could:
+
+    CMDARG_ERROR_BEHAVIOR=my_error_function
+
+CMDARG_ERROR_BEHAVIOR is treated as a function call (e.g. return or exit) with one argument, the value to return. You will be given no more context regarding the error (and, in fact, you should not expect this to be called unless a fatal error has been encountered, whether during setup or parsing).
 
 getopt vs getopts
 =================

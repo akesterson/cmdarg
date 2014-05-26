@@ -1,5 +1,26 @@
 source $(dirname ${BASH_SOURCE})/../cmdarg.sh
 
+function shunittest_flags_required
+{
+    # Tests that flags (:?) are required for array or hash arguments
+    
+    cmdarg_purge
+    declare -a something
+    declare -A something_else
+    cmdarg 'x[]' 'something' 'something' && return 1
+    cmdarg 'y{}' 'something_else' 'something else' && return 1
+
+    cmdarg_purge
+    cmdarg 'x:[]' 'something' 'something' || return 1
+    cmdarg 'y:{}' 'something_else' 'something' || return 1
+
+    cmdarg_purge
+    cmdarg 'x?[]' 'something' 'something' || return 1
+    cmdarg 'y?{}' 'something_else' 'something' || return 1
+
+    return 0
+}
+
 function shunittest_array_undefined()
 {
     # Tests that cmdarg and cmdarg_parse return an error when an array
@@ -81,4 +102,21 @@ function shunittest_boolean_no_optarg
     cmdarg_dump
     [[ "${cmdarg_cfg['boolean']}" == "true" ]] || return 1
     [[ "${cmdarg_argv[0]}" == "something" ]] || return 1
+}
+
+function shunittest_hash_malformed
+{
+    # Checks for malformed hash arguments that pass parsing
+
+    declare -A myhash
+
+    function parse
+    {
+	cmdarg_purge 
+	cmdarg 'x:{}' 'myhash' 'myhash'
+	cmdarg_parse "$@"
+    }
+
+    parse --myhash iamjustavalue && return 1
+    return 0
 }

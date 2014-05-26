@@ -5,6 +5,7 @@ if (( BASH_VERSINFO[0] < 4 )); then
     exit 1
 fi
 
+CMDARG_ERROR_BEHAVIOR=return
 
 CMDARG_FLAG_NOARG=0
 CMDARG_FLAG_REQARG=2
@@ -33,33 +34,36 @@ function cmdarg
     key="$2"
     if [[ "$shortopt" == "h" ]]; then
 	echo "-h is reserved for cmdarg usage" >&2
-	exit 1
+	${CMDARG_ERROR_BEHAVIOR} 1
     fi
     if  [[ "$(type -t cmdarg_$key)" != "" ]] || \
 	[[ "${CMDARG_FLAGS[$shortopt]}" != "" ]] || \
 	[[ "${CMDARG_TYPES[$key]}" != "" ]]; then
 	echo "command line key '$shortopt ($key)' is reserved by cmdarg or defined twice" >&2
-	exit 1
+	${CMDARG_ERROR_BEHAVIOR} 1
     fi
 
     declare -A argtypemap
     argtypemap[':']=$CMDARG_FLAG_REQARG
     argtypemap['?']=$CMDARG_FLAG_OPTARG
     argtype=${1:1:1}
-    if [[ "$argtype" != "" ]]; then
+    if [[ "$argtype" =~ ^[\[{]$ ]]; then
+	echo "Flags required [:?] when specifying Hash or Array arguments (${argtype})" >&2
+	${CMDARG_ERROR_BEHAVIOR} 1
+    elif [[ "$argtype" != "" ]]; then
 	CMDARG_FLAGS[$shortopt]=${argtypemap["$argtype"]}
 	if [[ "${1:2:4}" == "[]" ]]; then
 	    declare -p ${key} >/dev/null 2>&1
 	    if [[ $? -ne 0 ]]; then
 		echo 'Array variable '"${key}"' does not exist. Array variables MUST be declared by the user!' >&2
-		exit 1
+		${CMDARG_ERROR_BEHAVIOR} 1
 	    fi
 	    CMDARG_TYPES[$key]=$CMDARG_TYPE_ARRAY
 	elif [[ "${1:2:4}" == "{}" ]]; then
 	    declare -p ${key} >/dev/null 2>&1
 	    if [[ $? -ne 0 ]]; then
 		echo 'Hash variable '"${key}"' does not exist. Hash variables MUST be declared by the user!' >&2
-		exit 1
+		${CMDARG_ERROR_BEHAVIOR} 1
 	    fi
 	    CMDARG_TYPES[$key]=$CMDARG_TYPE_HASH
 	else
@@ -85,7 +89,7 @@ function cmdarg
     validatorfunc=${5:-}
     if [[ "$validatorfunc" != "" ]] && [[ "$(declare -F $validatorfunc)" == "" ]]; then
 	echo "Validators must be bash functions accepting 1 argument (not '$validatorfunc')" >&2
-	exit 1
+	${CMDARG_ERROR_BEHAVIOR} 1
     fi
     CMDARG_VALIDATORS["$shortopt"]="$validatorfunc"
     CMDARG_GETOPTLIST="${CMDARG_GETOPTLIST}$1"
@@ -102,7 +106,7 @@ function cmdarg_info
     if [ $? -ne 0 ]; then
 	echo "cmdarg_info <flag> <value>" >&2
 	echo "Where <flag> is one of $FLAGS" >&2
-	exit 1
+	${CMDARG_ERROR_BEHAVIOR} 1
     fi
     CMDARG_INFO["$1"]=$2
 }
@@ -152,7 +156,7 @@ function cmdarg_describe_default
 	    ;;
 	*)
 	    echo "Unable to return string description for ${opt}; unknown type ${argtype}" >&2
-	    exit 1
+	    ${CMDARG_ERROR_BEHAVIOR} 1
 	    ;;
     esac
 
@@ -187,36 +191,66 @@ function cmdarg_usage
     echo "${CMDARG_INFO['footer']}"
 }
 
+function cmdarg_validate
+{
+    set -u
+    local longopt value
+    longopt=$1
+    value=$2
+    hashkey=${3:-}
+    set +u
+
+    shortopt=${CMDARG_REV[$longopt]}
+    if [ "${CMDARG_VALIDATORS[$shortopt]}" != "" ]; then
+        ( ${CMDARG_VALIDATORS[${shortopt}]} "$value" "$hashkey")
+	if [ $? -ne 0 ]; then
+	    echo "Invalid value for -$shortopt : ${value}" >&2
+	    return 1
+	fi
+    fi
+    return 0
+}
+
 function cmdarg_set_opt
 {
+    set -u
     local key arg
     key=$1
     arg="$2"
+    set +u
+
     case ${CMDARG_TYPES[$key]} in
 	$CMDARG_TYPE_STRING)
 	    cmdarg_cfg[$key]=$arg
+	    cmdarg_validate "$key" "$arg" || ${CMDARG_ERROR_BEHAVIOR} 1
 	    ;;
 	$CMDARG_TYPE_BOOLEAN)
 	    cmdarg_cfg[$key]=true
+	    cmdarg_validate "$key" "$arg" || ${CMDARG_ERROR_BEHAVIOR} 1
 	    ;;
 	$CMDARG_TYPE_ARRAY)
 	    arrname="${key}"
 	    str='${#'"$arrname"'[@]}'
 	    prevlen=$(eval "echo $str")
 	    eval "${arrname}[$((prevlen + 1))]=\"$arg\""
+	    cmdarg_validate "$key" "$arg" || ${CMDARG_ERROR_BEHAVIOR} 1
 	    ;;
 	$CMDARG_TYPE_HASH)
-	    local arrname=${key}
-	    declare -gA -- "$arrname"
 	    local k=${arg%%=*}
 	    local v=${arg#*=}
-	    eval "$arrname[\$k]=\$v"
+	    if [[ "$k" == "$arg" ]] && [[ "$v" == "$arg" ]] && [[ "$k" == "$v" ]]; then
+		echo "Malformed hash argument: $arg" >&2
+		${CMDARG_ERROR_BEHAVIOR} 1
+	    fi
+	    eval "$key[\$k]=\$v"
+	    cmdarg_validate "$key" "$v" "$k" || ${CMDARG_ERROR_BEHAVIOR} 1
 	    ;;
 	*)
 	    echo "Unable to return string description for ${key}; unknown type ${CMDARG_TYPES[$key]}" >&2
-	    exit 1
+	    ${CMDARG_ERROR_BEHAVIOR} 1
 	    ;;
     esac
+    return 0
 }
 
 function cmdarg_check_empty
@@ -255,7 +289,9 @@ function cmdarg_parse
     #
     # Call it EXACTLY LIKE THAT, and it will parse your arguments for you.
     # This function only knows about the arguments that you previously called 'cmdarg' for.
-    local OPTIND parsing fullopt opt optarg longopt tmpopt
+    local OPTIND parsing fullopt opt optarg longopt tmpopt failed missing
+    failed=0
+    missing=""
 
     parsing=0
     while [[ "$@" != "" ]]; do
@@ -288,16 +324,16 @@ function cmdarg_parse
 	    echo "Malformed argument: ${fullopt}" >&2
 	    echo "While parsing: $@" >&2
 	    ${cmdarg_helpers['usage']} >&2
-	    exit 1
+	    ${CMDARG_ERROR_BEHAVIOR} 1
 	fi
 
     	if [[ "$opt" == "h" ]] || [[ "$longopt" == "help" ]]; then
 	    ${cmdarg_helpers['usage']} >&2
-    	    exit 1
+    	    ${CMDARG_ERROR_BEHAVIOR} 1
     	fi
 
 	if [[ $is_equals_arg -eq 1 ]]; then
-	    if [[ ${CMDARG_FLAGS[$opt]} -eq $CMDARG_FLAG_REQARG ]] || \
+	    if [[ ${CMDARG_FLAGS[$opt]} -eq ${CMDARG_FLAG_REQARG} ]] || \
 		[[ ${CMDARG_FLAGS[$opt]} -eq ${CMDARG_FLAG_OPTARG} ]]; then
 		optarg=$1
 		shift
@@ -306,47 +342,33 @@ function cmdarg_parse
 
 	if [ ${CMDARG["${opt}"]+abc} ]; then
 	    cmdarg_set_opt "${CMDARG[$opt]}" "$optarg"
+	    rc=$?
+	    failed=$((failed + $rc))
     	else
 	    echo "Unknown argument or invalid value : -${opt} | --${longopt}" >&2
     	    ${cmdarg_helpers['usage']} >&2
-    	    exit 1
+    	    ${CMDARG_ERROR_BEHAVIOR} 1
     	fi
     done
 
-    # --- Don't exit early during validation, tell the user
+    # --- Don't ${CMDARG_ERROR_BEHAVIOR} early during validation, tell the user
     # everything they did wrong first
-    failed=0
-    missing=""
 
     for key in "${CMDARG_REQUIRED[@]}"
     do
 	if [[ "$(cmdarg_check_empty $key)" == "" ]]; then
 	    missing="${missing} -${key}"
-	    failed=1
+	    failed=$((failed + 1))
 	fi
     done
 
-    local opt
-    local OPTARG
-    for opt in "${!cmdarg_cfg[@]}"
-    do
-	shortopt=${CMDARG_REV[$opt]}
-    	if [ "${CMDARG_VALIDATORS[$shortopt]}" != "" ]; then
-    	    OPTARG=${cmdarg_cfg[$opt]}
-	    ( ( ${CMDARG_VALIDATORS[${shortopt}]} "$OPTARG" ) && [ "$OPTARG" != "" ])
-	    if [ $? -ne 0 ]; then
-		echo "Invalid value for -$shortopt : ${cmdarg_cfg[$opt]}"
-		failed=1
-	    fi
-    	fi
-    done
-    if [ $failed -eq 1 ]; then
+    if [ $failed -gt 0 ]; then
 	if [[ "$missing" != "" ]]; then
-	    echo "Missing arguments : ${missing}"
+	    echo "Missing arguments : ${missing}" >&2
 	fi
-	echo
+	echo >&2
 	${cmdarg_helpers['usage']} >&2
-	exit 1
+	${CMDARG_ERROR_BEHAVIOR} 1
     fi
 
     if [ ! -z "${cmdarg_cfg[cfgfile]}" ]; then
