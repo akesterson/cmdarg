@@ -102,8 +102,7 @@ function cmdarg_info
     # Sets various flags about your script that are printed during cmdarg_usage
     #
     FLAGS="header|copyright|footer|author"
-    echo "$1" | grep -E "$FLAGS" >/dev/null 2>&1
-    if [ $? -ne 0 ]; then
+    if [[ "$1" =~ $FLAGS ]]; then
 	echo "cmdarg_info <flag> <value>" >&2
 	echo "Where <flag> is one of $FLAGS" >&2
 	${CMDARG_ERROR_BEHAVIOR} 1
@@ -205,7 +204,7 @@ function cmdarg_validate
         ( ${CMDARG_VALIDATORS[${shortopt}]} "$value" "$hashkey")
 	if [ $? -ne 0 ]; then
 	    echo "Invalid value for -$shortopt : ${value}" >&2
-	    return 1
+	    ${CMDARG_ERROR_BEHAVIOR} 1
 	fi
     fi
     return 0
@@ -303,8 +302,8 @@ function cmdarg_parse
 	shift
 	if [[ "${fullopt}"  =~ ^(--[a-zA-Z0-9_\-]+|^-[a-zA-Z0-9])= ]]; then
 	    tmpopt=$fullopt
-	    fullopt=$(echo "$tmpopt" | cut -d = -f 1)
-	    optarg=$(echo "$tmpopt" | cut -d = -f 2)
+	    fullopt=${tmpopt%%=*}
+	    optarg=${tmpopt##*=}
 	    is_equals_arg=0
 	fi
 
