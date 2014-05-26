@@ -30,8 +30,8 @@ function cmdarg
     #             the argument value is invalid. Can be straight bash, but it really
     #             should be the name of a function. This may be enforced in future versions
     #             of the library.
-    shortopt=${1:0:1}
-    key="$2"
+    local shortopt=${1:0:1}
+    local key="$2"
     if [[ "$shortopt" == "h" ]]; then
 	echo "-h is reserved for cmdarg usage" >&2
 	${CMDARG_ERROR_BEHAVIOR} 1
@@ -46,7 +46,7 @@ function cmdarg
     declare -A argtypemap
     argtypemap[':']=$CMDARG_FLAG_REQARG
     argtypemap['?']=$CMDARG_FLAG_OPTARG
-    argtype=${1:1:1}
+    local argtype=${1:1:1}
     if [[ "$argtype" =~ ^[\[{]$ ]]; then
 	echo "Flags required [:?] when specifying Hash or Array arguments (${argtype})" >&2
 	${CMDARG_ERROR_BEHAVIOR} 1
@@ -101,10 +101,10 @@ function cmdarg_info
     #
     # Sets various flags about your script that are printed during cmdarg_usage
     #
-    FLAGS="header|copyright|footer|author"
-    if [[ "$1" =~ $FLAGS ]]; then
+    local flags="header|copyright|footer|author"
+    if [[ "$1" =~ $flags ]]; then
 	echo "cmdarg_info <flag> <value>" >&2
-	echo "Where <flag> is one of $FLAGS" >&2
+	echo "Where <flag> is one of $flags" >&2
 	${CMDARG_ERROR_BEHAVIOR} 1
     fi
     CMDARG_INFO["$1"]=$2
@@ -112,14 +112,13 @@ function cmdarg_info
 
 function cmdarg_describe
 {
-    local longopt opt argtype default description flags validator
-    longopt=${CMDARG[$1]}
-    opt=$1
-    argtype=${CMDARG_TYPES[$longopt]}
-    default=${CMDARG_DEFAULT[$opt]}
-    description=${CMDARG_DESC[$opt]}
-    flags="${CMDARG_FLAGS[$opt]}"
-    validator="${CMDARG_VALIDATORS[$opt]}"
+    local longopt=${CMDARG[$1]}
+    local opt=$1
+    local argtype=${CMDARG_TYPES[$longopt]}
+    local default=${CMDARG_DEFAULT[$opt]}
+    local description=${CMDARG_DESC[$opt]}
+    local flags="${CMDARG_FLAGS[$opt]}"
+    local validator="${CMDARG_VALIDATORS[$opt]}"
 
     ${cmdarg_helpers['describe']} $longopt $opt $argtype "${default}" "${description}" "${flags}" "${validator}"
 }
@@ -127,14 +126,13 @@ function cmdarg_describe
 function cmdarg_describe_default
 {
     set -u
-    local longopt opt argtype default description flags validator
-    longopt=$1
-    opt=$2
-    argtype=$3
-    default="$4"
-    description="$5"
-    flags="$6"
-    validator="${7:-}"
+    local longopt=$1
+    local opt=$2
+    local argtype=$3
+    local default="$4"
+    local description="$5"
+    local flags="$6"
+    local validator="${7:-}"
     set +u
 
     if [ "${default}" != "" ]; then
@@ -193,13 +191,12 @@ function cmdarg_usage
 function cmdarg_validate
 {
     set -u
-    local longopt value
-    longopt=$1
-    value=$2
-    hashkey=${3:-}
+    local longopt=$1
+    local value=$2
+    local hashkey=${3:-}
     set +u
 
-    shortopt=${CMDARG_REV[$longopt]}
+    local shortopt=${CMDARG_REV[$longopt]}
     if [ "${CMDARG_VALIDATORS[$shortopt]}" != "" ]; then
         ( ${CMDARG_VALIDATORS[${shortopt}]} "$value" "$hashkey")
 	if [ $? -ne 0 ]; then
@@ -213,9 +210,8 @@ function cmdarg_validate
 function cmdarg_set_opt
 {
     set -u
-    local key arg
-    key=$1
-    arg="$2"
+    local key=$1
+    local arg="$2"
     set +u
 
     case ${CMDARG_TYPES[$key]} in
@@ -228,9 +224,9 @@ function cmdarg_set_opt
 	    cmdarg_validate "$key" "$arg" || ${CMDARG_ERROR_BEHAVIOR} 1
 	    ;;
 	$CMDARG_TYPE_ARRAY)
-	    arrname="${key}"
-	    str='${#'"$arrname"'[@]}'
-	    prevlen=$(eval "echo $str")
+	    local arrname="${key}"
+	    local str='${#'"$arrname"'[@]}'
+	    local prevlen=$(eval "echo $str")
 	    eval "${arrname}[$((prevlen + 1))]=\"$arg\""
 	    cmdarg_validate "$key" "$arg" || ${CMDARG_ERROR_BEHAVIOR} 1
 	    ;;
@@ -254,10 +250,9 @@ function cmdarg_set_opt
 
 function cmdarg_check_empty
 {
-    local key longopt
-    key=$1
-    longopt=${CMDARG[$key]}
-    type=${CMDARG_TYPES[$longopt]}
+    local key=$1
+    local longopt=${CMDARG[$key]}
+    local type=${CMDARG_TYPES[$longopt]}
 
     case $type in
 	$CMDARG_TYPE_STRING)
@@ -267,13 +262,13 @@ function cmdarg_check_empty
 	    echo ${cmdarg_cfg[$longopt]}
 	    ;;
 	$CMDARG_TYPE_ARRAY)
-	    arrname="${longopt}"
-	    lval='${!'"${arrname}"'[@]}'
+	    local arrname="${longopt}"
+	    local lval='${!'"${arrname}"'[@]}'
 	    eval "echo $lval"
 	    ;;
 	$CMDARG_TYPE_HASH)
-	    arrname="${longopt}"
-	    lval='${!'"${arrname}"'[@]}'
+	    local arrname="${longopt}"
+	    local lval='${!'"${arrname}"'[@]}'
 	    eval "echo $lval"
 	    ;;
 	*)
@@ -288,20 +283,20 @@ function cmdarg_parse
     #
     # Call it EXACTLY LIKE THAT, and it will parse your arguments for you.
     # This function only knows about the arguments that you previously called 'cmdarg' for.
-    local OPTIND parsing fullopt opt optarg longopt tmpopt failed missing
-    failed=0
-    missing=""
+    local failed=0
+    local missing=""
 
-    parsing=0
+    local parsing=0
     while [[ "$@" != "" ]]; do
-	optarg=""
-	opt=""
-	longopt=""
-	fullopt=$1
-	is_equals_arg=1
+	local optarg=""
+	local opt=""
+	local longopt=""
+	local fullopt=$1
+	local is_equals_arg=1
+
 	shift
 	if [[ "${fullopt}"  =~ ^(--[a-zA-Z0-9_\-]+|^-[a-zA-Z0-9])= ]]; then
-	    tmpopt=$fullopt
+	    local tmpopt=$fullopt
 	    fullopt=${tmpopt%%=*}
 	    optarg=${tmpopt##*=}
 	    is_equals_arg=0
@@ -341,7 +336,7 @@ function cmdarg_parse
 
 	if [ ${CMDARG["${opt}"]+abc} ]; then
 	    cmdarg_set_opt "${CMDARG[$opt]}" "$optarg"
-	    rc=$?
+	    local rc=$?
 	    failed=$((failed + $rc))
     	else
 	    echo "Unknown argument or invalid value : -${opt} | --${longopt}" >&2
@@ -353,6 +348,7 @@ function cmdarg_parse
     # --- Don't ${CMDARG_ERROR_BEHAVIOR} early during validation, tell the user
     # everything they did wrong first
 
+    local key
     for key in "${CMDARG_REQUIRED[@]}"
     do
 	if [[ "$(cmdarg_check_empty $key)" == "" ]]; then
@@ -368,10 +364,6 @@ function cmdarg_parse
 	echo >&2
 	${cmdarg_helpers['usage']} >&2
 	${CMDARG_ERROR_BEHAVIOR} 1
-    fi
-
-    if [ ! -z "${cmdarg_cfg[cfgfile]}" ]; then
-	. ${cmdarg_cfg[cfgfile]}
     fi
 }
 
@@ -392,6 +384,14 @@ function cmdarg_traceback
 
 function cmdarg_dump
 {
+    local key
+    local repr
+    local arrname
+    local keys
+    local idx
+    local ref
+    local value
+
     for key in ${!cmdarg_cfg[@]}
     do
 	repr="${key}:${CMDARG_TYPES[$key]}"
@@ -413,6 +413,8 @@ function cmdarg_dump
 
 function cmdarg_purge
 {
+    local arrays
+    local arr
     arrays="cmdarg_cfg CMDARG CMDARG_REV CMDARG_OPTIONAL CMDARG_REQUIRED"
     arrays="$arrays CMDARG_DESC CMDARG_DEFAULT CMDARG_VALIDATORS CMDARG_INFO"
     arrays="$arrays CMDARG_FLAGS CMDARG_TYPES"
