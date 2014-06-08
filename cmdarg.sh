@@ -169,7 +169,7 @@ function cmdarg_usage
     echo "${CMDARG_INFO['header']}"
     echo
     local key
-    if [[ "${#CMDARG_REQUIRED[@]}" -eq 0 ]]; then
+    if [[ "${#CMDARG_REQUIRED[@]}" -ne 0 ]]; then
 	echo "Required Arguments:"
 	for key in "${CMDARG_REQUIRED[@]}"
 	do
@@ -177,7 +177,7 @@ function cmdarg_usage
 	done
 	echo
     fi
-    if [[ "${#CMDARG_OPTIONAL[@]}" -eq 0 ]]; then
+    if [[ "${#CMDARG_OPTIONAL[@]}" -ne 0 ]]; then
 	echo "Optional Arguments":
 	for key in "${CMDARG_OPTIONAL[@]}"
 	do
@@ -417,11 +417,13 @@ function cmdarg_purge
     local arr
     arrays="cmdarg_cfg CMDARG CMDARG_REV CMDARG_OPTIONAL CMDARG_REQUIRED"
     arrays="$arrays CMDARG_DESC CMDARG_DEFAULT CMDARG_VALIDATORS CMDARG_INFO"
-    arrays="$arrays CMDARG_FLAGS CMDARG_TYPES"
+    arrays="$arrays CMDARG_FLAGS CMDARG_TYPES cmdarg_argv cmdarg_helpers"
     for arr in $arrays
     do
 	eval "$arr=()"
     done
+    cmdarg_helpers['describe']=cmdarg_describe_default
+    cmdarg_helpers['usage']=cmdarg_usage
     CMDARG_GETOPTLIST="h"
 }
 

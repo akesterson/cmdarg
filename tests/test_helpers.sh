@@ -39,12 +39,12 @@ function shunittest_test_describe_helper
 
 	echo "${opt}:${longopt}:${argtype}:${description}:${default}:${flags}:${validator}"
     }
-    cmdarg_helpers['describe']=describe
     function parser
     {
 	declare -a array
 	declare -A hash
 	cmdarg_purge
+	cmdarg_helpers['describe']=describe
 	cmdarg 's:' 'string' 'some string' '12345' always_succeed
 	cmdarg 'b' 'boolean' 'some boolean'
 	cmdarg 'a?[]' 'array' 'some array'
@@ -101,14 +101,13 @@ function shunittest_test_describe_and_usage_helper
 	done
     }
 
-    cmdarg_helpers['describe']=describe
-    cmdarg_helpers['usage']=usage
-
     function parser
     {
 	declare -a array
 	declare -A hash
 	cmdarg_purge
+	cmdarg_helpers['describe']=describe
+	cmdarg_helpers['usage']=usage
 	cmdarg 's:' 'string' 'some string' '12345' always_succeed
 	cmdarg 'b' 'boolean' 'some boolean'
 	cmdarg 'a?[]' 'array' 'some array'
