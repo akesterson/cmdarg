@@ -169,7 +169,7 @@ function cmdarg_usage
     echo "${CMDARG_INFO['header']}"
     echo
     local key
-    if [[ "${!CMDARG_REQUIRED[@]}" != "" ]]; then
+    if [[ "${#CMDARG_REQUIRED[@]}" -eq 0 ]]; then
 	echo "Required Arguments:"
 	for key in "${CMDARG_REQUIRED[@]}"
 	do
@@ -177,7 +177,7 @@ function cmdarg_usage
 	done
 	echo
     fi
-    if [[ "${!CMDARG_OPTIONAL[@]}" != "" ]]; then
+    if [[ "${#CMDARG_OPTIONAL[@]}" -eq 0 ]]; then
 	echo "Optional Arguments":
 	for key in "${CMDARG_OPTIONAL[@]}"
 	do
@@ -287,7 +287,7 @@ function cmdarg_parse
     local missing=""
 
     local parsing=0
-    while [[ "$@" != "" ]]; do
+    while [[ $# -ne 0 ]]; do
 	local optarg=""
 	local opt=""
 	local longopt=""
