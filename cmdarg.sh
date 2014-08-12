@@ -102,7 +102,7 @@ function cmdarg_info
     # Sets various flags about your script that are printed during cmdarg_usage
     #
     local flags="header|copyright|footer|author"
-    if [[ "$1" =~ $flags ]]; then
+    if [[ ! "$1" =~ $flags ]]; then
 	echo "cmdarg_info <flag> <value>" >&2
 	echo "Where <flag> is one of $flags" >&2
 	${CMDARG_ERROR_BEHAVIOR} 1
