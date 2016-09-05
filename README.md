@@ -91,7 +91,10 @@ For example, this is a valid validator:
 
     function validate_int
     {
-        echo "$1" | grep -E '^[0-9]+$'
+        if [[ "$1" =~ ^[0-9]+$ ]] ; then
+            return 0
+        fi
+        return 1
     }
 
     cmdarg 'x' 'x-option' 'some opt' '' validate_int
