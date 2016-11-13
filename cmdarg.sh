@@ -30,37 +30,42 @@ function cmdarg
     #             the argument value is invalid. Can be straight bash, but it really
     #             should be the name of a function. This may be enforced in future versions
     #             of the library.
-    local shortopt=${1:0:1}
-    local key="$2"
+    local option="${1:-}"
+    local shortopt=${option:0:1}
+    local key="${2:-}"
+    local description="${3:-}"
+    local default="${4:-}"
+    local validator="${5:-}"
+
     if [[ "$shortopt" == "h" ]]; then
 	echo "-h is reserved for cmdarg usage" >&2
 	${CMDARG_ERROR_BEHAVIOR} 1
     fi
     if  [[ "$(type -t cmdarg_$key)" != "" ]] || \
-	[[ "${CMDARG_FLAGS[$shortopt]}" != "" ]] || \
-	[[ "${CMDARG_TYPES[$key]}" != "" ]]; then
+	[[ "${CMDARG_FLAGS[$shortopt]:-}" != "" ]] || \
+	[[ "${CMDARG_TYPES[$key]:-}" != "" ]]; then
 	echo "command line key '$shortopt ($key)' is reserved by cmdarg or defined twice" >&2
 	${CMDARG_ERROR_BEHAVIOR} 1
     fi
 
-    declare -A argtypemap
+    declare -A argtypemap=()
     argtypemap[':']=$CMDARG_FLAG_REQARG
     argtypemap['?']=$CMDARG_FLAG_OPTARG
-    local argtype=${1:1:1}
+    local argtype=${option:1:1}
     if [[ "$argtype" =~ ^[\[{]$ ]]; then
 	echo "Flags required [:?] when specifying Hash or Array arguments (${argtype})" >&2
 	${CMDARG_ERROR_BEHAVIOR} 1
     elif [[ "$argtype" != "" ]]; then
 	CMDARG_FLAGS[$shortopt]=${argtypemap["$argtype"]}
-	if [[ "${1:2:4}" == "[]" ]]; then
-	    declare -p ${key} >/dev/null 2>&1
+	if [[ "${option:2:4}" == "[]" ]]; then
+	    declare -p "${key}" >/dev/null 2>&1
 	    if [[ $? -ne 0 ]]; then
 		echo 'Array variable '"${key}"' does not exist. Array variables MUST be declared by the user!' >&2
 		${CMDARG_ERROR_BEHAVIOR} 1
 	    fi
 	    CMDARG_TYPES[$key]=$CMDARG_TYPE_ARRAY
-	elif [[ "${1:2:4}" == "{}" ]]; then
-	    declare -p ${key} >/dev/null 2>&1
+	elif [[ "${option:2:4}" == "{}" ]]; then
+	    declare -p "${key}" >/dev/null 2>&1
 	    if [[ $? -ne 0 ]]; then
 		echo 'Hash variable '"${key}"' does not exist. Hash variables MUST be declared by the user!' >&2
 		${CMDARG_ERROR_BEHAVIOR} 1
@@ -75,24 +80,24 @@ function cmdarg
 	cmdarg_cfg[$key]=false
     fi
 
-    CMDARG["$shortopt"]=$2
-    CMDARG_REV["$2"]=$shortopt
-    CMDARG_DESC["$shortopt"]=$3
-    CMDARG_DEFAULT["$shortopt"]=${4:-}
-    if [[ ${CMDARG_FLAGS[$shortopt]} -eq $CMDARG_FLAG_REQARG ]] && [[ "${4:-}" == "" ]]; then
-	CMDARG_REQUIRED+=($shortopt)
+    CMDARG["$shortopt"]="$key"
+    CMDARG_REV["$key"]=$shortopt
+    CMDARG_DESC["$shortopt"]="$description"
+    CMDARG_DEFAULT["$shortopt"]="$default"
+    if [[ ${CMDARG_FLAGS[$shortopt]} -eq $CMDARG_FLAG_REQARG ]] && [[ "$default" == "" ]]; then
+	CMDARG_REQUIRED+=("$shortopt")
     else
-	CMDARG_OPTIONAL+=($shortopt)
+	CMDARG_OPTIONAL+=("$shortopt")
     fi
-    cmdarg_cfg["$2"]="${4:-}"
+    cmdarg_cfg["$key"]="$default"
     local validatorfunc
-    validatorfunc=${5:-}
-    if [[ "$validatorfunc" != "" ]] && [[ "$(declare -F $validatorfunc)" == "" ]]; then
+    validatorfunc="$validator"
+    if [[ "$validatorfunc" != "" ]] && [[ "$(declare -F "$validatorfunc")" == "" ]]; then
 	echo "Validators must be bash functions accepting 1 argument (not '$validatorfunc')" >&2
 	${CMDARG_ERROR_BEHAVIOR} 1
     fi
     CMDARG_VALIDATORS["$shortopt"]="$validatorfunc"
-    CMDARG_GETOPTLIST="${CMDARG_GETOPTLIST}$1"
+    CMDARG_GETOPTLIST="${CMDARG_GETOPTLIST}${option}"
 }
 
 function cmdarg_info
@@ -102,43 +107,41 @@ function cmdarg_info
     # Sets various flags about your script that are printed during cmdarg_usage
     #
     local flags="header|copyright|footer|author"
-    if [[ ! "$1" =~ $flags ]]; then
+    if [[ ! "${1:-}" =~ $flags ]]; then
 	echo "cmdarg_info <flag> <value>" >&2
 	echo "Where <flag> is one of $flags" >&2
 	${CMDARG_ERROR_BEHAVIOR} 1
     fi
-    CMDARG_INFO["$1"]=$2
+    CMDARG_INFO["${1:-}"]="${2:-}"
 }
 
 function cmdarg_describe
 {
-    local longopt=${CMDARG[$1]}
-    local opt=$1
-    local argtype=${CMDARG_TYPES[$longopt]}
-    local default=${CMDARG_DEFAULT[$opt]}
-    local description=${CMDARG_DESC[$opt]}
+    local opt="${1:-}"
+    local longopt="${CMDARG[$opt]}"
+    local argtype="${CMDARG_TYPES[$longopt]}"
+    local default="${CMDARG_DEFAULT[$opt]:-}"
+    local description="${CMDARG_DESC[$opt]:-}"
     local flags="${CMDARG_FLAGS[$opt]}"
-    local validator="${CMDARG_VALIDATORS[$opt]}"
+    local validator="${CMDARG_VALIDATORS[$opt]:-}"
 
-    ${cmdarg_helpers['describe']} $longopt $opt $argtype "${default}" "${description}" "${flags}" "${validator}"
+    ${cmdarg_helpers['describe']} "$longopt" "$opt" "$argtype" "$default" "$description" "$flags" "$validator"
 }
 
 function cmdarg_describe_default
 {
-    set -u
-    local longopt=$1
-    local opt=$2
-    local argtype=$3
-    local default="$4"
-    local description="$5"
-    local flags="$6"
+    local longopt="${1:-}"
+    local opt="${2:-}"
+    local argtype="${3:-}"
+    local default="${4:-}"
+    local description="${5:-}"
+    local flags="${6:-}"
     local validator="${7:-}"
-    set +u
 
     if [ "${default}" != "" ]; then
 	default="(Default \"${default}\")"
     fi
-    case ${argtype} in
+    case "${argtype}" in
 	$CMDARG_TYPE_STRING)
 	    echo "-${opt},--${longopt} v : String. ${description} ${default}"
 	    ;;
@@ -190,15 +193,13 @@ function cmdarg_usage
 
 function cmdarg_validate
 {
-    set -u
-    local longopt=$1
-    local value=$2
-    local hashkey=${3:-}
-    set +u
+    local longopt="${1:-}"
+    local value="${2:-}"
+    local hashkey="${3:-}"
 
-    local shortopt=${CMDARG_REV[$longopt]}
-    if [ "${CMDARG_VALIDATORS[$shortopt]}" != "" ]; then
-        ( ${CMDARG_VALIDATORS[${shortopt}]} "$value" "$hashkey")
+    local shortopt="${CMDARG_REV[$longopt]:-}"
+    if [ "${CMDARG_VALIDATORS[$shortopt]:-}" != "" ]; then
+        ( ${CMDARG_VALIDATORS[$shortopt]} "$value" "$hashkey")
 	if [ $? -ne 0 ]; then
 	    echo "Invalid value for -$shortopt : ${value}" >&2
 	    ${CMDARG_ERROR_BEHAVIOR} 1
@@ -209,12 +210,10 @@ function cmdarg_validate
 
 function cmdarg_set_opt
 {
-    set -u
-    local key=$1
-    local arg="$2"
-    set +u
+    local key="${1:-}"
+    local arg="${2:-}"
 
-    case ${CMDARG_TYPES[$key]} in
+    case "${CMDARG_TYPES[$key]:-}" in
 	$CMDARG_TYPE_STRING)
 	    cmdarg_cfg[$key]=$arg
 	    cmdarg_validate "$key" "$arg" || ${CMDARG_ERROR_BEHAVIOR} 1
@@ -250,11 +249,11 @@ function cmdarg_set_opt
 
 function cmdarg_check_empty
 {
-    local key=$1
-    local longopt=${CMDARG[$key]}
+    local key="${1:-}"
+    local longopt="${CMDARG[$key]:-}"
     local type=${CMDARG_TYPES[$longopt]}
 
-    case $type in
+    case "$type" in
 	$CMDARG_TYPE_STRING)
             echo ${cmdarg_cfg[$longopt]}
             ;;
@@ -291,7 +290,7 @@ function cmdarg_parse
 	local optarg=""
 	local opt=""
 	local longopt=""
-	local fullopt=$1
+	local fullopt="${1:-}"
 	local is_equals_arg=1
 
 	shift
@@ -428,31 +427,31 @@ function cmdarg_purge
 }
 
 # Holds the final map of configuration options
-declare -xA cmdarg_cfg
+declare -xA cmdarg_cfg=()
 # Maps (short arg) -> (long arg)
-declare -xA CMDARG
+declare -xA CMDARG=()
 # Maps (long arg) -> (short arg)
-declare -xA CMDARG_REV
+declare -xA CMDARG_REV=()
 # A list of optional arguments (e.g., no :)
-declare -xa CMDARG_OPTIONAL
+declare -xa CMDARG_OPTIONAL=()
 # A list of required arguments (e.g., :)
-declare -xa CMDARG_REQUIRED
+declare -xa CMDARG_REQUIRED=()
 # Maps (short arg) -> (description)
-declare -xA CMDARG_DESC
+declare -xA CMDARG_DESC=()
 # Maps (short arg) -> default
-declare -xA CMDARG_DEFAULT
+declare -xA CMDARG_DEFAULT=()
 # Maps (short arg) -> validator
-declare -xA CMDARG_VALIDATORS
+declare -xA CMDARG_VALIDATORS=()
 # Miscellanious info about this script
-declare -xA CMDARG_INFO
+declare -xA CMDARG_INFO=()
 # Map of (short arg) -> flags
-declare -xA CMDARG_FLAGS
+declare -xA CMDARG_FLAGS=()
 # Map of (short arg) -> type (string, array, hash)
-declare -xA CMDARG_TYPES
+declare -xA CMDARG_TYPES=()
 # Array of all elements found after --
-declare -xa cmdarg_argv
+declare -xa cmdarg_argv=()
 # Hash of functions that are used for user-extensible functionality
-declare -xA cmdarg_helpers
+declare -xA cmdarg_helpers=()
 cmdarg_helpers['describe']=cmdarg_describe_default
 cmdarg_helpers['usage']=cmdarg_usage
 
