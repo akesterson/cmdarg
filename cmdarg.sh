@@ -164,7 +164,10 @@ function cmdarg_usage
     # cmdarg_usage
     #
     # Prints a very helpful usage message about the current program.
-    echo "$(basename "$0") ${CMDARG_INFO['copyright']} : ${CMDARG_INFO['author']}"
+    local copyright=${CMDARG_INFO['copyright']:+ ${CMDARG_INFO['copyright']}}
+    local author=${CMDARG_INFO['author']:+ : ${CMDARG_INFO['author']}}
+
+    echo "$(basename "$0")$copyright$author"
     echo
     echo "${CMDARG_INFO['header']}"
     echo
