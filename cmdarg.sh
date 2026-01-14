@@ -326,7 +326,7 @@ function cmdarg_parse
                 ${CMDARG_ERROR_BEHAVIOR} 1
             fi
 
-        if [[ $is_equals_arg -eq 1 ]]; then
+        if [[ $is_equals_arg -eq 1 && -n "$opt" ]]; then
             if [[ ${CMDARG_FLAGS[$opt]} -eq ${CMDARG_FLAG_REQARG} ]] || \
                 [[ ${CMDARG_FLAGS[$opt]} -eq ${CMDARG_FLAG_OPTARG} ]]; then
                 optarg=$1
@@ -334,7 +334,7 @@ function cmdarg_parse
             fi
         fi
 
-        if [ ${CMDARG["${opt}"]+abc} ]; then
+        if [ -n "$opt" ] && [ ${CMDARG["${opt}"]+abc} ]; then
             cmdarg_set_opt "${CMDARG[$opt]}" "$optarg"
             local rc=$?
             failed=$((failed + $rc))
