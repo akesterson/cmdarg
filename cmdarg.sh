@@ -237,7 +237,7 @@ function cmdarg_set_opt
                 echo "Malformed hash argument: $arg" >&2
                 ${CMDARG_ERROR_BEHAVIOR} 1
             fi
-            eval "$key[\$k]=\$v"
+            eval "${key}[\$k]=\$v"
             cmdarg_validate "$key" "$v" "$k" || ${CMDARG_ERROR_BEHAVIOR} 1
             ;;
         *)
@@ -316,7 +316,7 @@ function cmdarg_parse
             continue
         else
             echo "Malformed argument: ${fullopt}" >&2
-            echo "While parsing: $@" >&2
+            echo "While parsing: $*" >&2
             ${cmdarg_helpers['usage']} >&2
             ${CMDARG_ERROR_BEHAVIOR} 1
         fi
@@ -337,7 +337,7 @@ function cmdarg_parse
         if [ -n "$opt" ] && [ ${CMDARG["${opt}"]+abc} ]; then
             cmdarg_set_opt "${CMDARG[$opt]}" "$optarg"
             local rc=$?
-            failed=$((failed + $rc))
+            failed=$((failed + rc))
             else
             echo "Unknown argument or invalid value : -${opt} | --${longopt}" >&2
                 ${cmdarg_helpers['usage']} >&2
@@ -374,7 +374,7 @@ function cmdarg_traceback
     local FRAMES=${#BASH_LINENO[@]}
     # FRAMES-2 skips main, the last one in arrays
     for ((i=FRAMES-2; i>=1; i--)); do
-        echo '  File' \"${BASH_SOURCE[i+1]}\", line ${BASH_LINENO[i]}, probably in ${FUNCNAME[i+1]} >&2
+        echo "  File \"${BASH_SOURCE[i+1]}\", line ${BASH_LINENO[i]}, probably in ${FUNCNAME[i+1]}" >&2
         # Grab the source code of the line
         sed -n "${BASH_LINENO[i]}{s/^/    /;p}" "${BASH_SOURCE[i+1]}" >&2
     done
