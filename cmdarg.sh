@@ -303,7 +303,7 @@ function cmdarg_parse
         fi
 
         if [[ "$fullopt" == "--" ]] && [[ $parsing -eq 0 ]]; then
-            cmdarg_argv+=($@)
+            cmdarg_argv+=("$@")
             break
         elif [[ "${fullopt:0:2}" == "--" ]]; then
             longopt=${fullopt:2}
