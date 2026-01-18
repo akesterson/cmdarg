@@ -28,3 +28,4 @@ jobs:
         report_paths: 'junit.xml'
         annotate_only: true
         include_passed: true
+        fail_on_failure: true
