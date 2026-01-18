@@ -1,5 +1,9 @@
-VERSION:=$(shell if [ -d .git ]; then bash -c 'gitversion.sh | grep "^MAJOR=" | cut -d = -f 2'; else source version.sh && echo $$MAJOR ; fi)
-RELEASE:=$(shell if [ -d .git ]; then bash -c 'gitversion.sh | grep "^BUILD=" | cut -d = -f 2'; else source version.sh && echo $$BUILD ; fi)
+ifndef PREFIX
+	PREFIX=/usr
+endif
+
+VERSION:=$(shell if [ -d .git ]; then bash -c '$(PREFIX)/bin/gitversion.sh | grep "^MAJOR=" | cut -d = -f 2'; else source version.sh && echo $$MAJOR ; fi)
+RELEASE:=$(shell if [ -d .git ]; then bash -c '$(PREFIX)/bin/gitversion.sh | grep "^BUILD=" | cut -d = -f 2'; else source version.sh && echo $$BUILD ; fi)
 DISTFILE=./dist/cmdarg-$(VERSION)-$(RELEASE).tar.gz
 SPECFILE=cmdarg.spec
 ifndef RHEL_VERSION
@@ -19,12 +23,13 @@ ifndef PREFIX
 endif
 
 DISTFILE_DEPS=$(shell find . -type f | grep -Ev '\.git|\./dist/|$(DISTFILE)')
+JUNIT_DEPS=$(wildcard *.sh) $(wildcard tests/*.sh)
 
 all: ./dist/$(RPM)
 
 # --- PHONY targets
 
-.PHONY: clean srpm rpm gitclean dist
+.PHONY: clean srpm rpm gitclean dist test test-ci
 clean:
 	rm -f $(DISTFILE)
 	rm -fr dist/cmdarg-$(VERSION)-$(RELEASE)*
@@ -38,7 +43,17 @@ rpm: ./dist/$(RPM) ./dist/$(SRPM)
 gitclean:
 	git clean -df
 
+test: tunit.txt
+
+test-ci: junit.xml
+
 # --- End phony targets
+
+junit.xml: cmdarg.sh $(JUNIT_DEPS)
+	AK_PREFIX=. $(PREFIX)/bin/shunit.sh -f junit -t tests > junit.xml
+
+tunit.txt: cmdarg.sh $(JUNIT_DEPS)
+	AK_PREFIX=. $(PREFIX)/bin/shunit.sh -f tunit -t tests | tee tunit.txt
 
 version.sh:
 	gitversion.sh > version.sh
@@ -65,10 +80,9 @@ $(RHEL_DISTFILE): $(DISTFILE)
 uninstall:
 	rm -f $(PREFIX)/usr/lib/cmdarg.sh
 
-
 install:
-	mkdir -p $(PREFIX)/usr/lib
-	install ./cmdarg.sh $(PREFIX)/usr/lib/cmdarg.sh
+	mkdir -p $(PREFIX)/lib
+	install ./cmdarg.sh $(PREFIX)/lib/cmdarg.sh
 
 MANIFEST:
-	echo /usr/lib/cmdarg.sh > MANIFEST
+	echo $(PREFIX)/lib/cmdarg.sh > MANIFEST
