@@ -11,15 +11,17 @@ jobs:
       run: |
         set -x
         mkdir -p deps
+        mkdir -p installed
+        PREFIX="$(pwd)/installed"
         git clone ${{ vars.VERSIONERS_URI }} deps/versioners
         cd deps/versioners
-        make install
+        PREFIX="$PREFIX" make install
         cd ../../
         git clone ${{ vars.SHUNIT_URI }} deps/shunit
         cd deps/shunit
-        make install
+        PREFIX="$PREFIX" make install
         cd ../../
-        make test-ci
+        PREFIX="$PREFIX" make test-ci
         cat junit.xml
     - name: Publish Test Report
       uses: mikepenz/action-junit-report@v5
