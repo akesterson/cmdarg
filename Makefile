@@ -5,18 +5,6 @@ endif
 VERSION:=$(shell if [ -d .git ]; then bash -c '$(PREFIX)/bin/gitversion.sh | grep "^MAJOR=" | cut -d = -f 2'; else source version.sh && echo $$MAJOR ; fi)
 RELEASE:=$(shell if [ -d .git ]; then bash -c '$(PREFIX)/bin/gitversion.sh | grep "^BUILD=" | cut -d = -f 2'; else source version.sh && echo $$BUILD ; fi)
 DISTFILE=./dist/cmdarg-$(VERSION)-$(RELEASE).tar.gz
-SPECFILE=cmdarg.spec
-ifndef RHEL_VERSION
-	RHEL_VERSION=5
-endif
-ifeq ($(RHEL_VERSION),5)
-        MOCKFLAGS=--define "_source_filedigest_algorithm md5" --define "_binary_filedigest_algorithm md5"
-endif
-
-RHEL_RELEASE:=$(RELEASE).el$(RHEL_VERSION)
-SRPM=cmdarg-$(VERSION)-$(RHEL_RELEASE).src.rpm
-RPM=cmdarg-$(VERSION)-$(RHEL_RELEASE).noarch.rpm
-RHEL_DISTFILE=./dist/cmdarg-$(VERSION)-$(RHEL_RELEASE).tar.gz
 
 ifndef PREFIX
 	PREFIX=''
@@ -25,7 +13,7 @@ endif
 DISTFILE_DEPS=$(shell find . -type f | grep -Ev '\.git|\./dist/|$(DISTFILE)')
 JUNIT_DEPS=$(wildcard *.sh) $(wildcard tests/*.sh)
 
-all: ./dist/$(RPM)
+all: $(DISTFILE)
 
 # --- PHONY targets
 
@@ -35,10 +23,6 @@ clean:
 	rm -fr dist/cmdarg-$(VERSION)-$(RELEASE)*
 
 dist: $(DISTFILE)
-
-srpm: ./dist/$(SRPM)
-
-rpm: ./dist/$(RPM) ./dist/$(SRPM)
 
 gitclean:
 	git clean -df
@@ -63,19 +47,6 @@ $(DISTFILE): version.sh
 	mkdir dist/cmdarg-$(VERSION)-$(RELEASE) || rm -fr dist/cmdarg-$(VERSION)-$(RELEASE)
 	rsync -aWH . --exclude=.git --exclude=dist ./dist/cmdarg-$(VERSION)-$(RELEASE)/
 	cd dist && tar -czvf ../$@ cmdarg-$(VERSION)-$(RELEASE)
-
-$(RHEL_DISTFILE): $(DISTFILE)
-	cd dist && \
-		cp -R cmdarg-$(VERSION)-$(RELEASE) cmdarg-$(VERSION)-$(RHEL_RELEASE) && \
-		tar -czvf ../$@ cmdarg-$(VERSION)-$(RHEL_RELEASE)
-
-./dist/$(SRPM): $(RHEL_DISTFILE)
-	rm -fr ./dist/$(SRPM)
-	mock -r epel-$(RHEL_VERSION)-noarch --buildsrpm --verbose --spec $(SPECFILE) $(MOCKFLAGS) --sources ./dist/ --resultdir ./dist/ --define "version $(VERSION)" --define "release $(RHEL_RELEASE)"
-
-./dist/$(RPM): ./dist/$(SRPM)
-	rm -fr ./dist/$(RPM)
-	mock --verbose -r epel-$(RHEL_VERSION)-noarch ./dist/$(SRPM) --resultdir ./dist/ --define "version $(VERSION)" --define "release $(RHEL_RELEASE)"
 
 uninstall:
 	rm -f $(PREFIX)/usr/lib/cmdarg.sh

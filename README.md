@@ -1,8 +1,6 @@
 cmdarg
 ======
 
-[![Build Status](http://jenkins.aklabs.net/buildStatus/icon?job=cmdarg-test)](http://jenkins.aklabs.net/job/cmdarg-test/)
-
 Requires bash >= 4.
 
     source cmdarg.sh
@@ -14,13 +12,7 @@ Installation
 
 From source
 
-    cd cmdarg
-    make install
-
-From RPM
-
-    # add http://yum.aklabs.net/el/[5|6]/noarch as a yum repo for your system
-    yum install cmdarg
+    cp cmdarg.sh PATH_WHERE_YOU_WANT_IT
 
 Usage
 =====
