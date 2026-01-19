@@ -412,6 +412,11 @@ function cmdarg_dump
             echo "${repr} => ${cmdarg_cfg[$key]}"
         fi
     done
+    echo "argv =>"
+    for idx in "${!cmdarg_argv[@]}"
+    do
+	echo "        ${idx} => ${cmdarg_argv[$idx]}"
+    done
 }
 
 function cmdarg_purge
