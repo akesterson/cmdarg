@@ -1,7 +1,8 @@
 #!/bin/bash
 
-if (( BASH_VERSINFO[0] < 4 )); then
-    echo "cmdarg is incompatible with bash versions < 4, please upgrade bash" >&2
+# Require Bash >= 4.3 for associative arrays and nameref support
+if (( BASH_VERSINFO[0] < 4 )) || (( BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 3 )); then
+    echo "cmdarg is incompatible with bash versions < 4.3, please upgrade bash" >&2
     exit 1
 fi
 
@@ -227,10 +228,8 @@ function cmdarg_set_opt
             cmdarg_validate "$key" "$arg" || ${CMDARG_ERROR_BEHAVIOR} 1
             ;;
         "$CMDARG_TYPE_ARRAY")
-            local arrname="${key}"
-            local str='${#'"$arrname"'[@]}'
-            local prevlen=$(eval "echo $str")
-            eval "${arrname}[$((prevlen + 1))]=\"$arg\""
+            local -n arr="$key"
+            arr+=("$arg")
             cmdarg_validate "$key" "$arg" || ${CMDARG_ERROR_BEHAVIOR} 1
             ;;
         "$CMDARG_TYPE_HASH")
@@ -240,7 +239,10 @@ function cmdarg_set_opt
                 echo "Malformed hash argument: $arg" >&2
                 ${CMDARG_ERROR_BEHAVIOR} 1
             fi
-            eval "${key}[\$k]=\$v"
+
+            local -n map="$key"
+            # shellcheck disable=SC2034
+            map["$k"]="$v"
             cmdarg_validate "$key" "$v" "$k" || ${CMDARG_ERROR_BEHAVIOR} 1
             ;;
         *)
@@ -265,14 +267,12 @@ function cmdarg_check_empty
             echo "${cmdarg_cfg[$longopt]}"
             ;;
         "$CMDARG_TYPE_ARRAY")
-            local arrname="${longopt}"
-            local lval='${!'"${arrname}"'[@]}'
-            eval "echo $lval"
+            local -n ref="$longopt"
+            echo "${!ref[@]}"
             ;;
         "$CMDARG_TYPE_HASH")
-            local arrname="${longopt}"
-            local lval='${!'"${arrname}"'[@]}'
-            eval "echo $lval"
+            local -n ref="$longopt"
+            echo "${!ref[@]}"
             ;;
         *)
             echo "${cmdarg_cfg[$longopt]}"
@@ -389,8 +389,6 @@ function cmdarg_dump
 {
     local key
     local repr
-    local arrname
-    local keys
     local idx
     local ref
     local value
@@ -399,14 +397,11 @@ function cmdarg_dump
     do
         repr="${key}:${CMDARG_TYPES[$key]}"
         if [[ ${CMDARG_TYPES[$key]} == "$CMDARG_TYPE_ARRAY" ]] || [[ ${CMDARG_TYPES[$key]} == "$CMDARG_TYPE_HASH" ]] ; then
-            arrname="${key}"
             echo "${repr} => "
-            keys='${!'"$arrname"'[@]}'
-            for idx in $(eval "echo $keys")
+            local -n ref="$key"
+            for idx in "${!ref[@]}"
             do
-                ref='${'"$arrname"'[$idx]}'
-                value=$(eval "echo $ref")
-                echo "        ${idx} => $value"
+                echo "        ${idx} => ${ref[$idx]}"
             done
         else
             echo "${repr} => ${cmdarg_cfg[$key]}"
@@ -428,7 +423,8 @@ function cmdarg_purge
     arrays="$arrays CMDARG_FLAGS CMDARG_TYPES cmdarg_argv cmdarg_helpers"
     for arr in $arrays
     do
-        eval "$arr=()"
+        local -n ref="$arr"
+        ref=()
     done
     cmdarg_helpers['describe']=cmdarg_describe_default
     cmdarg_helpers['usage']=cmdarg_usage

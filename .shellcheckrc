@@ -1,5 +1,3 @@
-# Many array expressions are constructed and eval-ed
-disable=SC2016
 # False positive on "CMDARG_ERROR_BEHAVIOR=return"
 disable=SC2209
 # Checking exit code with $? is more of a preference when the script doesn't try to support the errexit shell option
