@@ -26,11 +26,9 @@ function cmdarg
     # description : The text description for this option to be used in cmdarg_usage
     #
     # default value : The default value, if any, for the argument
-    # validator : This is passed through eval(), with $OPTARG equal to the current
+    # validator : This is a bash function, invoked with one argument equal to the current
     #             value of the argument in question, and must return non-zero if
-    #             the argument value is invalid. Can be straight bash, but it really
-    #             should be the name of a function. This may be enforced in future versions
-    #             of the library.
+    #             the argument value is invalid.
     local shortopt=${1:0:1}
     local key="$2"
     if [[ "$shortopt" == "h" ]]; then
